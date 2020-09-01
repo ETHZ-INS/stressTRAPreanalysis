@@ -1,0 +1,21 @@
+SampleName;Geontype;ELS;Pool;Set;Gender;Condition;Publication;Estrodiol
+SRR5762436;Wild Type;None;p1;GSE100579;female;None;2others;Hi
+SRR5762437;Wild Type;None;p2;GSE100579;female;FST;2others;Hi
+SRR5762438;BDNFMET;None;p3;GSE100579;female;None;2others;Hi
+SRR5762439;BDNFMET;None;p4;GSE100579;female;FST;2others;Hi
+SRR5762440;Wild Type;None;p5;GSE100579;male;None;2others;None
+SRR5762441;Wild Type;None;p6;GSE100579;male;FST;2others;None
+SRR5762442;BDNFMET;None;p7;GSE100579;male;None;2others;None
+SRR5762443;BDNFMET;None;p8;GSE100579;male;FST;2others;None
+SRR5762444;Wild Type;None;p9;GSE100579;female;None;2others;Lo
+SRR5762445;Wild Type;None;p10;GSE100579;female;FST;2others;Lo
+SRR9161643;Wild Type;None;p11;GSE131972;male;None;Frontiers;None
+SRR9161644;Wild Type;None;p12;GSE131972;male;None;Frontiers;None
+SRR9161645;Wild Type;None;p13;GSE131972;male;FST;Frontiers;None
+SRR9161646;Wild Type;None;p14;GSE131972;male;FST;Frontiers;None
+SRR9161647;Wild Type;ELS;p15;GSE131972;male;None;Frontiers;None
+SRR9161648;Wild Type;ELS;p16;GSE131972;male;None;Frontiers;None
+SRR9161649;Wild Type;ELS;p17;GSE131972;male;None;Frontiers;None
+SRR9161650;Wild Type;ELS;p18;GSE131972;male;FST;Frontiers;None
+SRR9161651;Wild Type;ELS;p19;GSE131972;male;FST;Frontiers;None
+SRR9161652;Wild Type;ELS;p20;GSE131972;male;FST;Frontiers;None
