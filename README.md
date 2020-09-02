@@ -1,13 +1,11 @@
----
-title: "Trap Reanalysis"
-output:
-  html_document:
-    keep_md: yes
-    theme: united
-    toc: yes
-  pdf_document:
-    toc: yes
----
+- [About this re-analysis](#about-this-re-analysis)
+- [Re-analysis of published results](#re-analysis-of-published-results)
+  * [Assessment of Marrocco et al. 2017](#assessment-of-marrocco-et-al-2017)
+  * [Assessment of Gray et al. 2018](#assessment-of-gray-et-al-2018)
+  * [Assessment of Marrocco et al. 2019](#assessment-of-marrocco-et-al-2019)
+- [Meta-Analysis of all data](#meta-analysis-of-all-data)
+  * [Additive model](#additive-model)
+  * [Interactive models](#interactive-models)
 
 
 
