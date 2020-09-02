@@ -1,0 +1,104 @@
+---
+title: "TRAP re-analysis"
+author: "Pierre-Luc Germain"
+date: "9/2/2020"
+output: html_document
+---
+
+```{r}
+suppressPackageStartupMessages({
+  library(DESeq2)
+  library(sva)
+  library(SEtools)
+  library(RUVSeq)
+})
+```
+
+# GSE100579
+
+```{r}
+dat1 <- readRDS("data/TRAPReanalysis.SE.rds")
+dat1 <- dat1[,dat1$Set=="GSE100579"]
+dat1$Genotype <- factor(gsub(" ","",dat1$Geontype), c("WildType","BDNFMET"))
+dat1$Geontype <- NULL
+dat1$Condition <- relevel(dat1$Condition, "None")
+dds1 <- DESeqDataSetFromMatrix( round(assay(dat1)), colData=colData(dat1),
+        design=~Gender+Genotype+Condition+Gender:Condition )
+dds1 <- DESeq(dds1)
+# so that we plot the DESeq-normalized counts:
+dat1 <- dat1[row.names(dds1),]
+assays(dat1)$lognorm <- log1p(counts(dds1, normalized=TRUE))
+rowData(dat1)$logCount <- rowMeans(assays(dat1)$lognorm)
+
+resultsNames(dds1)
+```
+
+## Gender
+
+```{r}
+res <- results(dds1, name = "Gender_male_vs_female")
+DESeq2::plotMA(res)
+res <- res[order(res$padj),]
+res[1:10,c(1,2,6)]
+dat1 <- dat1[,order(dat1$Gender, dat1$Condition, dat1$Genotype, dat1$Estrodiol)]
+sehm(dat1, row.names(res)[which(res$padj<0.05)], assayName = "lognorm", do.scale = TRUE, anno_row="logCount", anno_columns=c("Gender","Genotype","Condition"), main="Differentially-expressed across sex")
+```
+
+## FST
+
+```{r}
+res <- results(dds1, name = "Condition_FST_vs_None")
+DESeq2::plotMA(res)
+res <- res[order(res$padj),]
+dat1 <- dat1[,order(dat1$Condition, dat1$Gender, dat1$Genotype, dat1$Estrodiol)]
+sehm(dat1, row.names(res)[which(res$padj<0.05)], assayName = "lognorm", do.scale = TRUE, anno_row="logCount", anno_columns=c("Gender","Genotype","Condition"), main="Differentially-expressed upon FST")
+```
+
+Here you see exactly why I don't use DESeq: it gives significance even when there are large intra-group differences...
+
+## Genotype
+
+```{r}
+res <- results(dds1, name = "Genotype_BDNFMET_vs_WildType")
+DESeq2::plotMA(res)
+res <- res[order(res$padj),]
+dat1 <- dat1[,order(dat1$Genotype, dat1$Gender, dat1$Condition, dat1$Estrodiol)]
+sehm(dat1, row.names(res)[which(res$padj<0.05)], assayName = "lognorm", do.scale = TRUE, anno_row="logCount", anno_columns=c("Gender","Genotype","Condition"), main="Differentially-expressed between genotypes")
+```
+
+## Gender:FST
+
+```{r}
+res <- results(dds1, name = "Gendermale.ConditionFST")
+DESeq2::plotMA(res)
+res <- res[order(res$padj),]
+res[1:10,c(1,2,6)]
+dat1 <- dat1[,order(dat1$Gender, dat1$Condition, dat1$Genotype, dat1$Estrodiol)]
+sehm(dat1, row.names(res)[which(res$padj<0.05)], assayName = "lognorm", do.scale = TRUE,  anno_row="logCount", anno_columns=c("Gender","Genotype","Condition"), main="Sex-dependent effects of FST")
+```
+
+The MA-plot shows a suspicious trend. Adam17 and Prl are clearly artefacts of low counts (filtering improves both edgeR and DESeq2), especially given the trend shown by the MA-plot. RP23 is another of these weird DESeq2 calls. Kif21b and Gm7334 could be something (but see below).
+
+### Their genes
+
+```{r}
+g <- read.csv("metadata/Marrocco2017GenderStressGenes.csv")[,1]
+sehm(dat1, g, assayName = "lognorm", do.scale = TRUE,  anno_row="logCount", anno_columns=c("Gender","Genotype","Condition"), main="Marrocco et al. 2017 - claimed sex-dependent effects of FST")
+```
+
+
+## SVA
+
+```{r}
+ll <- split(seq_len(ncol(dat1)), paste(dat1$Gender, dat1$Condition))
+s <- sapply(ll, n=max(lengths(ll)), FUN=function(x,n) c(x,rep(-1,n))[seq_len(n)]) 
+rv <- RUVs(round(assay(dat1)), row.names(dat1), k=1, scIdx = s)
+assays(dat1)$corrected <- log1p(rv$normalizedCounts)
+sehm(dat1, g, assayName = "corrected", do.scale = TRUE,  anno_row="logCount", anno_columns=c("Gender","Genotype","Condition"), main="Marrocco et al. sex-dependent stress genes - after correcting 1 SV")
+```
+
+```{r}
+sehm(dat1, row.names(res)[which(res$padj<0.05)], assayName = "corrected", do.scale = TRUE,  anno_row="logCount", anno_columns=c("Gender","Genotype","Condition"), main="Sex-dependent effects of FST")
+```
+
+Also the genes we had found are considerably less clear after SVA.
