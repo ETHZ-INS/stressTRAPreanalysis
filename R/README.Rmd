@@ -1,0 +1,327 @@
+---
+title: "Trap Reanalysis"
+output:
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+  fig.path = "README_figs/README-"
+)
+```
+
+required r libraries
+```{r results='hide', message=FALSE, warning=FALSE}
+library(edgeR)
+library(SEtools)
+library(SummarizedExperiment)
+library(plgINS)
+```
+
+
+# About this re-analysis
+
+Here, we outline the re-analysis of two GEO datasets, GSE100579 and GSE131972, both of which are investigating the effect of acute stress on the translatome of CA3 pyramidal neurons in the mouse hippocampus.
+
+This repositories were used for 3 seperate publications:
+
+Marrocco J. et al. 2017; 
+A sexually dimorphic pre-stressed translational signature in CA3 pyramidal neurons of BDNF Val66Met mice; Nature Communications volume 8, Article number: 808 (2017)
+
+Gray J. D. et al. 2018; 
+Translational profiling of stress-induced neuroplasticity in the CA3 pyramidal neurons of BDNF Val66Met mice; Molecular Psychiatry volume 23, pages 904–913
+
+Marrocco J. et al. 2019; 
+Early Life Stress Restricts Translational Reactivity in CA3 Neurons Associated With Altered Stress Responses in Adulthood; Front. Behav. Neurosci. https://doi.org/10.3389/fnbeh.2019.00157 
+
+
+the reanalysis be performed on the quantification of two different alginment methods a genome alignment using xxx and salmon or a pseudoalignment to the transcriptome using kallisto
+
+first, we are loading both the kallisto and the genome alignment data
+
+```{r}
+kallistodata <- readRDS("data/TRAPReanalysis.SE.rds")
+salmondata <- readRDS("data/GSE131972.salmon.SE.rds")
+```
+
+# Re-analysis of published results
+## Assessment of Marrocco et al. 2017
+
+Concerning the 2017 publication the authors claim that numerous genes are differentially regulated between males and females after acute stress. Unfortunately, they do not include a list with all genes in the publication, but Table 1 contains a subsets of genes that are allegedly differentially regulated between males and females upon acute stress
+
+Let's inspect these genes across the runs used for the original publication in wild type animals
+
+```{r}
+se <- kallistodata
+se <- subset(se,select  = se$Set == "GSE100579" & se$Geontype == "Wild Type")
+genes <- read.table("metadata/Marrocco2017SexStressGenes.csv", sep = ";", header = T)$genes
+sehm(se,genes,do.scale = T,anno_columns = c("ELS","Condition","Geontype","Gender","Set"), cluster_rows = T)
+```
+
+It looks as if there could be something to this, however unfortunately this finding is higly underpowered having only 6 replicates for a 4 group comparison
+
+Let's inspect these genes across all sequencing runs and find out wheather the finding for male wild type mice in the second set GSE131972 holds up.
+
+```{r}
+se <- kallistodata
+se <- subset(se,select  = se$ELS == "None" & se$Geontype == "Wild Type")
+sehm(se,genes,do.scale = T,anno_columns = c("ELS","Condition","Geontype","Gender","Set"), cluster_rows = T)
+```
+
+it becomes apparent that these genes seem to be co-expressed and highly variable across all samples. the finding that in females and males these genes react differently to stress seems inaccurate. It highlights the danger of applying single run sequencing.
+
+If we further visualize these genes across all samples, we find
+```{r}
+se <- kallistodata
+sehm(se,genes,do.scale = T,anno_columns = c("ELS","Condition","Geontype","Gender","Set"), cluster_rows = T)
+```
+
+The selected genes display a high co-expression and could possibly be highly variable due to technical reasons. Let's try to remove technical variability from our runs using SVA and re-visualize the same genes
+
+```{r}
+se <- svacor(se, form = ~ Set + Gender * Condition, form0 = ~Set)
+sehm(se,genes,do.scale = T,anno_columns = c("ELS","Condition","Geontype","Gender","Set"), cluster_rows = T,assayName = "corrected")
+```
+
+As we can see, removing technical variability abolishes the effects for the male-female stress effects seen in the single replicate comparisons. It becomes apparent, that these genes do not have any sex specific acute stress response across all samples
+
+## Assessment of Gray et al. 2018
+
+A complete assessment of the findings of Gray et al. 2018 is unfortunately not possible. the repository GSE100579 is missing crucial samples for the chronic stress model for the BDNF Val66Met genotype and only includes samples of acute stress.
+
+However, the authors claim that many genes are differentially regulated between wild type and BDNF Val66Met animals at baseline. While no complete list of genes has been included in the publication, a subset can be found in Table 1
+
+```{r}
+se <- kallistodata
+genes <- read.table("metadata/Gray2018GenotypeGenes.csv", sep = ";", header = T)$genes
+se <- subset(se,select  = se$Set == "GSE100579" & se$Condition == "None")
+sehm(se,genes,do.scale = T,anno_columns = c("ELS","Condition","Geontype","Gender","Set"), cluster_rows = T)
+```
+
+Let's investigate these genes across all samples
+```{r}
+se <- kallistodata
+sehm(se,genes,do.scale = T,anno_columns = c("ELS","Condition","Geontype","Gender","Set"), cluster_rows = T)
+```
+
+We see a similar pattern as in Marrocco et al 2017. The baseline difference does not reproduce in GSE 131972 which only includes wild type mice.
+
+Let's again try to eliminate technical variabilty and re-visualize the same genes
+
+```{r}
+se <- svacor(se, form = ~Set + Gender + Geontype + Condition + ELS)
+sehm(se,genes,do.scale = T,anno_columns = c("ELS","Condition","Geontype","Gender","Set"), cluster_rows = T,assayName = "corrected")
+```
+
+It becomes apparent, that these genes do not have any genotype specific baseline difference across all samples
+
+## Assessment of Marrocco et al. 2019
+
+Let's run a re-analysis of Marrocco et al. 2019 checking for ELS dependent changes in the acute stress response
+```{r}
+se <- kallistodata
+se <- subset(se,select  = se$Set == "GSE131972")
+```
+
+In their Publications the authors unfortunately do not upload a list with differentially expressed genes. However, in their discussion they mention a number of genes that they claim are differentially expressed between ELS and non-ELS mice after acute stress.
+They claim that acute stress reduces the expression of Grin1, Grin2a, Gabbr2, and Gabra1 in CA3 neurons of non-ELS mice, but not ELS mice:
+```{r}
+sehm(se,c("Grin1","Grin2a","Gabbr2","Gabra1"),do.scale = T,anno_columns = c("ELS","Condition"), cluster_rows = T)
+```
+
+it becomes apparent, that this finding does not look very solid
+
+Further, they claim that there is restricted list of genes selectively induced by AS in ELS mice (Per1, Npy, Nfkbia, Penk,Dusp1, Cst3, Trib1, Htra1, Sdc4, Plekhf1) but not non-ELS mice.
+```{r}
+sehm(se,c("Per1", "Npy", "Nfkbia", "Penk","Dusp1", "Cst3", "Trib1", "Htra1", "Sdc4", "Plekhf1"),do.scale = T,anno_columns = c("ELS","Condition"), cluster_rows = T)
+```
+
+it becomes apparent, that this finding also does not look very solid. while these genes might be increased in expression in ELS mice it is hard to see this being a significant finding, especially, since the same effect can be observed for one replicate in the non-ELS group.
+
+The authors claim that there are a number of genes that appear to be induced by AS in both ELS and non ELS mice. these include (Egr1/2/4, Arc, Fos, and Fosb)
+```{r}
+sehm(se,c("Egr1", "Egr2", "Egr4", "Arc","Fos", "Fosb"),do.scale = T,anno_columns = c("ELS","Condition"), cluster_rows = T)
+```
+
+For these genes it looks as if their finding might be significant.
+
+Let's investigate the whole data with a statistical approach using egeR and a GLM type of analysis for swim effects, early life effects and interactions
+```{r}
+#experimental design, interactive model
+design <- model.matrix(~se$Condition * se$ELS)
+
+y <- DGEList(counts=assays(se)$counts)
+y <- calcNormFactors(y)
+y <- estimateDisp(y,design)
+
+#filter out genes that are below 10 counts in more than 75% of samples
+keep <- rowSums(y$counts>10) >= 3
+y <- y[keep, , keep.lib.sizes=FALSE]
+
+Results <- list()
+fit <- glmQLFit(y,design)
+for(i in colnames(design)[-1]){
+  Results[[i]] <- glmQLFTest(fit, i)
+}
+```
+
+Les's investigate if there are any genes altered by acute stress
+```{r}
+topTags(Results$`se$ConditionNone`)
+```
+
+Indeed, there are two candidate genes that pass the multiple testing correction, Fos and Egr4
+
+
+Are there any genes altered by early life stress?
+```{r}
+topTags(Results$`se$ELSNone`)
+```
+
+Unfortunately, there are no genes that pass the multiple testing correction
+
+Let's investigate if there are genes with a significant interaction
+```{r}
+topTags(Results$`se$ConditionNone:se$ELSNone`)
+```
+
+Unfortunately, no genes have a altered acute stress response in ELS vs normal animals
+
+
+# Meta-Analysis of all data
+
+## Additive model
+Let's run an overarching analysis over all data to determine if there are any significant effects for acute stress (=Condition), Genotype, GEOdataset or early life stress
+```{r}
+se <- kallistodata
+
+#experimental design, full additive model
+design <- model.matrix(~se$Condition + se$Gender + se$Geontype + se$Set + se$ELS)
+
+y <- DGEList(counts=assays(se)$counts)
+y <- calcNormFactors(y)
+y <- estimateDisp(y,design)
+
+#filter out genes that are below 10 counts in more than 75% of samples
+keep <- rowSums(y$counts>10) >= 5
+y <- y[keep, , keep.lib.sizes=FALSE]
+
+Results <- list()
+fit <- glmQLFit(y,design)
+for(i in colnames(design)[-1]){
+  Results[[i]] <- glmQLFTest(fit, i)
+}
+```
+
+Les's investigate if there are any genes altered by acute stress
+```{r}
+topTags(Results$`se$ConditionNone`)
+```
+Indeed, there are multiple candidate genes that are significantly altered by acute stress across other conditions
+
+Are there any genes altered by sex
+```{r}
+topTags(Results$`se$Gendermale`)
+```
+Indeed, there are multiple candidate genes that are significantly altered by sex across other conditions
+
+
+Are there any genes altered by BDNF Val66Met phenotype?
+```{r}
+topTags(Results$`se$GeontypeWild Type`)
+```
+
+Unfortunately, there are no genes that pass the multiple testing correction
+
+Are there any genes altered early life stress?
+```{r}
+topTags(Results$`se$ELSNone`)
+```
+
+Unfortunately, there are no genes that pass the multiple testing correction
+
+Let's plot the top 10 genes for both sex and acute stress
+```{r}
+genes <- append(rownames(topTags(Results$`se$ConditionNone`)),rownames(topTags(Results$`se$Gendermale`)))
+sehm(se,genes,do.scale = T,anno_columns = c("ELS","Condition","Geontype","Gender","Set"), cluster_rows = T,assayName = "logcpm")
+```
+
+## Interactive models
+
+To futher investigate if across all samples there is any variable that interacts with acute stress we will run a series of models that incorporate an interaction term between acute stress and any of the variables
+
+Interaction between acute stress and sex
+```{r}
+se <- kallistodata
+
+#experimental design, full additive model
+design <- model.matrix(~se$Condition + se$Gender + se$Geontype + se$Set + se$ELS + se$Condition:se$Gender)
+
+y <- DGEList(counts=assays(se)$counts)
+y <- calcNormFactors(y)
+y <- estimateDisp(y,design)
+
+#filter out genes that are below 10 counts in more than 75% of samples
+keep <- rowSums(y$counts>10) >= 5
+y <- y[keep, , keep.lib.sizes=FALSE]
+
+Results <- list()
+fit <- glmQLFit(y,design)
+for(i in colnames(design)[-1]){
+  Results[[i]] <- glmQLFTest(fit, i)
+}
+topTags(Results$`se$ConditionNone:se$Gendermale`)
+```
+
+Interaction between acute stress and genotype
+```{r}
+se <- kallistodata
+
+#experimental design, full additive model
+design <- model.matrix(~se$Condition + se$Gender + se$Geontype + se$Set + se$ELS + se$Condition:se$Geontype)
+
+y <- DGEList(counts=assays(se)$counts)
+y <- calcNormFactors(y)
+y <- estimateDisp(y,design)
+
+#filter out genes that are below 10 counts in more than 75% of samples
+keep <- rowSums(y$counts>10) >= 5
+y <- y[keep, , keep.lib.sizes=FALSE]
+
+Results <- list()
+fit <- glmQLFit(y,design)
+for(i in colnames(design)[-1]){
+  Results[[i]] <- glmQLFTest(fit, i)
+}
+topTags(Results$`se$ConditionNone:se$GeontypeWild Type`)
+```
+
+Interaction between acute stress and early life stress
+```{r}
+se <- kallistodata
+
+#experimental design, full additive model
+design <- model.matrix(~se$Condition + se$Gender + se$Geontype + se$Set + se$ELS + se$Condition:se$ELS)
+
+y <- DGEList(counts=assays(se)$counts)
+y <- calcNormFactors(y)
+y <- estimateDisp(y,design)
+
+#filter out genes that are below 10 counts in more than 75% of samples
+keep <- rowSums(y$counts>10) >= 5
+y <- y[keep, , keep.lib.sizes=FALSE]
+
+Results <- list()
+fit <- glmQLFit(y,design)
+for(i in colnames(design)[-1]){
+  Results[[i]] <- glmQLFTest(fit, i)
+}
+topTags(Results$`se$ConditionNone:se$ELSNone`)
+```
+
+
