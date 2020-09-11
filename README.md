@@ -1,14 +1,25 @@
----
-title: "Trap Reanalysis"
-output:
-  html_document:
-    keep_md: yes
-    theme: united
-    toc: yes
-  pdf_document:
-    toc: yes
----
-
+- [About this re-analysis](#about-this-re-analysis)
+- [Re-analysis of published results](#re-analysis-of-published-results)
+  * [Assessment of Marrocco et al. 2017](#assessment-of-marrocco-et-al-2017)
+  * [Assessment of Gray et al. 2018](#assessment-of-gray-et-al-2018)
+  * [Assessment of Marrocco et al. 2019](#assessment-of-marrocco-et-al-2019)
+    + [Using kallisto data](#using-kallisto-data)
+    + [Using salmon data](#using-salmon-data)
+- [Meta-Analysis of all data](#meta-analysis-of-all-data)
+  * [Additive model](#additive-model)
+  * [Interactive models](#interactive-models)
+- [DESeq2 analysis](#deseq2-analysis)
+  * [GSE100579](#gse100579)
+    + [Gender](#gender)
+    + [FST](#fst)
+    + [Genotype](#genotype)
+    + [Gender:FST](#gender-fst)
+- [DESeq2 analysis with randomized variable reassignments](#deseq2-analysis-with-randomized-variable-reassignments)
+  * [GSE100579](#gse100579-1)
+    + [Gender](#gender-1)
+    + [FST](#fst-1)
+    + [Genotype](#genotype-1)
+    + [Gender:FST](#gender-fst-1)
 
 
 required r libraries
