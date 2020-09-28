@@ -1,17 +1,22 @@
----
-title: "Trap Reanalysis"
-output:
-  html_document:
-    keep_md: yes
-    theme: united
-    toc: yes
-  pdf_document:
-    toc: yes
-  word_document:
-    toc: yes
----
-
-
+- [About this re-analysis](#about-this-re-analysis)
+- [Re-analysis of published results](#re-analysis-of-published-results)
+  * [Assessment of Marrocco et al. 2017](#assessment-of-marrocco-et-al-2017)
+  * [Assessment of Gray et al. 2018](#assessment-of-gray-et-al-2018)
+  * [Assessment of Marrocco et al. 2019](#assessment-of-marrocco-et-al-2019)
+    + [Visualization of genes mentioned in the publication](#visualization-of-genes-mentioned-in-the-publication)
+    + [Analysis using kallisto data and edgeR](#analysis-using-kallisto-data-and-edger)
+    + [Using salmon data and edgeR](#using-salmon-data-and-edger)
+    + [Using DESeq instead of EdgeR for statistical analysis](#using-deseq-instead-of-edger-for-statistical-analysis)
+- [Meta-Analysis of all data](#meta-analysis-of-all-data)
+  * [Additive model](#additive-model)
+    + [Are genes differentially expressed following forces swim stress?](#are-genes-differentially-expressed-following-forces-swim-stress-)
+    + [Are genes differentially expressed between males and females?](#are-genes-differentially-expressed-between-males-and-females-)
+    + [Are genes differentially expressed in BDNF Val66Met mice?](#are-genes-differentially-expressed-in-bdnf-val66met-mice-)
+    + [Are genes differentially expressed following early life stress?](#are-genes-differentially-expressed-following-early-life-stress-)
+  * [Interactive models](#interactive-models)
+    + [Are responses of FST genes altered by sex?](#are-responses-of-fst-genes-altered-by-sex-)
+    + [Are responses of FST genes altered by BDNF Val66Met?](#are-responses-of-fst-genes-altered-by-bdnf-val66met-)
+    + [are responses of FST genes altered by early life stress?](#are-responses-of-fst-genes-altered-by-early-life-stress-)
 
 required r libraries
 
