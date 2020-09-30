@@ -1,0 +1,87 @@
+---
+title: "Trap Reanalysis - salmon-based analysis"
+output:
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+  fig.path = "figures/salmonBased-"
+)
+```
+
+Here we reproduce the re-analysis of the data from [Marrocco J. et al. 2019](https://doi.org/10.3389/fnbeh.2019.00157) shown in the [readme](README.md), but using, like the authors, a salmon-based quantifications. This shows that the results are robust to changes in the quantification used.
+
+Marrocco et al. 2019 were reporting changes in the acute stress response (forced-swim test, FST) depending on the prior exposure to early life stress (ELS).
+
+### Visualization of genes reported in the publication 
+
+```{r results='hide', message=FALSE, warning=FALSE}
+library(edgeR)
+library(SEtools)
+library(SummarizedExperiment)
+library(DESeq2)
+source("misc.R")
+se <- readRDS("data/GSE131972.salmonv2.SE.rds")
+```
+
+The authors claimed that acute stress reduces the expression of Grin1, Grin2a, Gabbr2, and Gabra1 in CA3 neurons of non-ELS mice, but not ELS mice:
+
+```{r, fig.height=2.5, fig.width=5}
+assays(se)$logcpm <- log1p(cpm(calcNormFactors(DGEList(assay(se)))))
+sehm(se,c("Grin1","Grin2a","Gabbr2","Gabra1"), do.scale=T, anno_columns = c("ELS","FST"), , assayName = "TPM",  main = "Reported genes")
+```
+
+The authors also claim that the following genes are selectively induced by AS in ELS mice, but not non-ELS mice:
+
+```{r, fig.height=2.5, fig.width=5}
+sehm(se, c("Per1", "Npy", "Nfkbia", "Penk","Dusp1", "Cst3", "Trib1", "Htra1", "Sdc4", "Plekhf1"), do.scale=T, assayName="logcpm", anno_columns = c("ELS","FST"),  main = "Reported genes")
+```
+
+As with our previous analysis, this claim does not look very robust: while these genes might be increased in expression in ELS mice upon stress, the variability across samples of the same group prevents use from making clear claims, and especially to claim that these genes are not activated in the non-ELS group, where one of the two samples does appear to show an activation.
+
+### Interaction analysis
+
+```{r}
+#experimental design, interactive model
+design <- model.matrix(~se$FST * se$ELS) # identicial to ~FST+ELS+FST:ELS
+
+y <- DGEList(counts=assays(se)$counts)
+y <- calcNormFactors(y)
+y <- estimateDisp(y,design)
+
+# filter out lowly-expressed genes
+y <- y[filterByExpr(y, design),]
+
+Results <- list()
+fit <- glmQLFit(y,design)
+for(i in colnames(design)[-1]){
+  Results[[i]] <- glmQLFTest(fit, i)
+}
+```
+
+
+We first ask whether that are genes altered by acute stress:
+
+```{r}
+topTags(Results$`se$FSTFST`)
+```
+
+We next ask whether there are genes altered by early life stress?
+```{r}
+topTags(Results$`se$ELSELS`)
+```
+
+We finally investigate whether there are genes with a significant interaction:
+
+```{r}
+topTags(Results$`se$FSTFST:se$ELSELS`)
+```
+
+No genes have a altered acute stress response in ELS vs normal animals. This is stark contrast with the authors' own conclusions, as the original study reported hundereds of genes being as being altered in their FST response following ELS.
+
