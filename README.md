@@ -1,3 +1,16 @@
+---
+title: "Trap Reanalysis"
+output:
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+
+
 # Reassessing the effects of acute stress on the translatome of hippocampal neurons
 
 ## About this re-analysis
@@ -17,7 +30,10 @@ We show that a number of the analyses and claims made in these publications are 
 
 
 ***
-  
+
+# Methods
+
+We acquired the deposited raw sequencing fastq files from the online repositories GSE100579 (10 sequencing runs for (Marrocco et al. 2017, Gray et al. 2018) and GSE131972 (sequencing 10 runs for (Marrocco et al. 2019)) and used kallisto (DOI:10.1038/nbt.3519, version 0.44.0) for the pseudoalignment of reads on the GENCODE M17 transcriptome, with an estimated fragment length of 200 ±20. GENsOME ALIGNMENT SPECIFICS
 
 # Re-analysis of published results
 
@@ -32,6 +48,7 @@ library(sva)
 library(DESeq2)
 source("misc.R")
 kallistodata <- readRDS("data/AllData.kallisto.SE.rds")
+set.seed(12345)
 ```
 
 Because we later provide a meta-analysis of the datasets, we will work on a uniform, [kallisto](https://pachterlab.github.io/kallisto/about)-based quantification.
@@ -98,7 +115,7 @@ sehm(se, genes, do.scale=T, assayName="logcpm", cluster_rows = T, gaps_at = "Set
 
 ![](figures/README-unnamed-chunk-5-1.png)<!-- -->
 
-The high co-expression of the reported genes suggests that the variability is the result of a single vector of variation, whih could be either technical, but is in any case unrelated to the experimental design. To investigate this, we attempt to model this vector of variation using Surrogate Variable Analysis ([SVA](https://www.bioconductor.org/packages/release/bioc/html/sva.html) - see the [exact implementation here](misc.R)), and to visualize the reported genes in the corrected data:
+The high co-expression of the reported genes suggests that the variability is the result of a single vector of variation, which could be either technical, but is in any case unrelated to the experimental design. To investigate this, we attempt to model this vector of variation using Surrogate Variable Analysis ([SVA](https://www.bioconductor.org/packages/release/bioc/html/sva.html) - see the [exact implementation here](misc.R)), and to visualize the reported genes in the corrected data:
 
 
 ```r
@@ -131,7 +148,7 @@ Together, this re-analysis indicates that the reported sex-specific transcriptio
 
 A complete assessment of the findings of Gray et al. 2018 is unfortunately not possible since the repository [GSE100579](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE100579) is missing crucial samples for the chronic stress model for the BDNF Val66Met genotype and only includes samples of acute stress.
 
-However, the authors claim that many genes are differentially regulated between WildType and BDNF Val66Met animals at baseline. While no complete list of genes has been included in the publication, a subset can be found in the publication's [Table 1](https://www.nature.com/articles/mp2016219/tables/1).
+However, the authors claim that many genes are differentially regulated between WildType and BDNF Val66Met animals at baseline, a regulation which is dependent on sex. While no complete list of genes has been included in the publication, a subset can be found in the publication's [Table 1](https://www.nature.com/articles/mp2016219/tables/1).
 
 We plot these genes in the GSE100579 data set:
 
@@ -173,7 +190,7 @@ se <- dosvacor(se, form = ~Set + Sex + Genotype + FST + ELS, form0 = ~Set)
 ```
 
 ```
-## Number of significant surrogate variables is:  2 
+## Number of significant surrogate variables is:  3 
 ## Iteration (out of 5 ):1  2  3  4  5
 ```
 
@@ -200,7 +217,7 @@ se <- se[order(rownames(se)),]
 se <- subset(se,select  = se$Set == "GSE131972")
 ```
 
-In their publications the authors unfortunately do not upload a list with differentially expressed genes. However, in their discussion they mention a number of genes that they claim are differentially expressed between ELS and non-ELS mice after acute stress. We look at the expression of these genes across the very samples used in their study:
+In their publications the authors unfortunately do not upload a list with differentially expressed genes. However, in their discussion they mention a number of genes that they claim are differentially expressed between ELS and non-ELS mice after acute stress. We look at the expression of these genes across the very samples used in their study. They claim that selected genes are only induced in non-ELS mice following FST:
 
 
 ```r
@@ -210,9 +227,9 @@ sehm(se, c("Grin1","Grin2a","Gabbr2","Gabra1"), do.scale=T, assayName="logcpm",
 
 ![](figures/README-unnamed-chunk-11-1.png)<!-- -->
 
-In light of the very large intra-group variability of these genes, their any claim on their ELS-dependent activation is dubious.
+In light of the very large intra-group variability of these genes, their any claim on their non-ELS-dependent activation is dubious.
 
-Further, they claim that a restricted set of genes selectively induced by AS in ELS mice but not non-ELS mice.
+Further, they claim that a restricted set of genes selectively induced by FST in ELS mice but not non-ELS mice.
 
 
 ```r
@@ -236,7 +253,8 @@ For these genes, instead, we concur with the authors that these well-known genes
 
 ### Interaction analysis
 
-To establish whether ELS does impact the transcriptional response to acute stress, it is insufficient to simply analyse the two response separately, as the authors did, and simply substract the sets of significant genes. Instead, we need to rely on linear regression using an interaction term, which is fortunately possible using edgeR's generalized linear models:
+To establish whether ELS does impact the transcriptional response to acute stress, it is insufficient to simply analyse the two response separately, as the authors did, and simply substract the sets of significant genes. Instead, we need to rely on linear regression using an interaction term, which is fortunately possible using edgeR's generalized linear models. Here we use the standard glm which is less stringent and more susceptible to type 1 errors, but has a better sensitivity in low replicate experiments. An analysis with a glmQL model did not yield any significant results.
+
 
 
 ```r
@@ -246,14 +264,12 @@ design <- model.matrix(~se$FST * se$ELS) # identicial to ~FST+ELS+FST:ELS
 y <- DGEList(counts=assays(se)$counts)
 y <- calcNormFactors(y)
 y <- estimateDisp(y,design)
-
-# filter out lowly-expressed genes
 y <- y[filterByExpr(y, design),]
 
 Results <- list()
-fit <- glmQLFit(y,design)
+fit <- glmFit(y,design)
 for(i in colnames(design)[-1]){
-  Results[[i]] <- glmQLFTest(fit, i)
+  Results[[i]] <- glmLRT(fit, i)
 }
 ```
 
@@ -266,20 +282,20 @@ topTags(Results$`se$FSTFST`)
 
 ```
 ## Coefficient:  se$FSTFST 
-##              logFC     logCPM        F       PValue       FDR
-## Egr4     1.6089789  5.8854438 43.72835 0.0001475057 0.9999096
-## Plekhg3 -2.2028996  2.4615140 35.04210 0.0003177739 0.9999096
-## Fosb     1.9003789  4.4234011 32.78511 0.0003981112 0.9999096
-## Fos      2.0925115  5.1006405 29.09383 0.0005925220 0.9999096
-## Nadsyn1  7.7891037 -0.1856326 24.57399 0.0014977229 0.9999096
-## Junb     0.9951607  6.8068993 21.51001 0.0015522402 0.9999096
-## Egr2     2.2334746  2.4233386 18.61470 0.0024037956 0.9999096
-## Mill2    4.0302985 -1.3626955 15.88830 0.0038073742 0.9999096
-## Afap1l1 -1.6622411  1.9910872 14.93493 0.0045309194 0.9999096
-## Olfm1    0.7872977 10.1569427 13.82364 0.0056050371 0.9999096
+##                 logFC     logCPM       LR       PValue        FDR
+## Nadsyn1      7.788697 -0.1856326 23.30605 1.381649e-06 0.02027432
+## Fos          2.092030  5.1006405 18.81602 1.439529e-05 0.06223390
+## Egr4         1.608956  5.8854438 18.63037 1.586727e-05 0.06223390
+## Plekhg3     -2.202026  2.4615140 18.50292 1.696440e-05 0.06223390
+## Fosb         1.899855  4.4234011 17.92003 2.303836e-05 0.06761298
+## Stard9      -4.217794 -0.4341469 14.86158 1.156958e-04 0.28295333
+## Mill2        4.024261 -1.3626955 14.07301 1.758488e-04 0.36862931
+## Egr2         2.233255  2.4233386 13.55050 2.322299e-04 0.42596774
+## RP23-62O7.9 -7.148746 -1.2582485 13.13874 2.892520e-04 0.47160925
+## Ushbp1      -6.790005 -1.5724706 12.53551 3.992913e-04 0.58592012
 ```
 
-Even though the data looked promising no genes pass mutliple testing correction, most likely owing to the insufficient sample size.
+Even though the data looked promising only one gene passes mutliple testing correction, most likely owing to the insufficient sample size.
 
 We next ask whether there are genes altered by early life stress?
 
@@ -289,20 +305,20 @@ topTags(Results$`se$ELSELS`)
 
 ```
 ## Coefficient:  se$ELSELS 
-##              logFC     logCPM        F       PValue       FDR
-## Pcdha4   1.0791635  3.5528592 24.93795 0.0009763957 0.9999737
-## Lrrc40   0.9782095  5.7617445 23.18466 0.0012295402 0.9999737
-## Nadsyn1  7.7863133 -0.1856326 25.65597 0.0013224044 0.9999737
-## Piga    -1.5789586  1.5385751 17.14831 0.0030584387 0.9999737
-## Mill2    3.8132281 -1.3626955 15.44373 0.0041253111 0.9999737
-## Il10ra  -7.3580467 -1.1359543 17.08481 0.0056541318 0.9999737
-## Syt9    -1.4251180  1.2125522 12.81109 0.0068743585 0.9999737
-## Ak7     -1.3777222  0.6610638 12.59671 0.0071877797 0.9999737
-## Fut9     0.8416052  4.9188926 12.02491 0.0081154865 0.9999737
-## Rgma     0.5823202  4.7429735 11.44676 0.0092107896 0.9999737
+##                  logFC     logCPM        LR       PValue        FDR
+## Nadsyn1       7.786364 -0.1856326 24.327310 8.127852e-07 0.01192681
+## Il10ra       -7.357688 -1.1359543 20.922603 4.782183e-06 0.03508688
+## Tec          -4.488194 -2.3191622 19.189000 1.183937e-05 0.05791029
+## Mill2         3.827833 -1.3626955 13.872101 1.956818e-04 0.71785853
+## Piga         -1.592914  1.5385751 11.174924 8.291030e-04 0.99997057
+## RP23-45E20.3  6.234163 -1.4397776  9.676333 1.866568e-03 0.99997057
+## Ecel1        -1.884815 -0.1093226  8.877256 2.887451e-03 0.99997057
+## Pcdha4        1.080423  3.5528592  8.774824 3.054166e-03 0.99997057
+## Lrrc40        0.978220  5.7617445  8.714893 3.156209e-03 0.99997057
+## Syt9         -1.434765  1.2125522  8.685376 3.207734e-03 0.99997057
 ```
 
-Again, none passes the multiple testing correction.
+Again, only two genes passe the multiple testing correction.
 
 We finally investigate whether there are genes with a significant interaction:
 
@@ -313,17 +329,17 @@ topTags(Results$`se$FSTFST:se$ELSELS`)
 
 ```
 ## Coefficient:  se$FSTFST:se$ELSELS 
-##              logFC     logCPM        F       PValue       FDR
-## Plekhg3  2.8250888  2.4615140 36.28235 0.0002821862 0.9998703
-## Piga     2.6242149  1.5385751 22.15531 0.0014166703 0.9998703
-## Nadsyn1 -8.1410422 -0.1856326 21.33174 0.0022370467 0.9998703
-## Stard9   5.7102564 -0.4341469 14.37908 0.0050325781 0.9998703
-## Mill2   -4.5346274 -1.3626955 14.22887 0.0051798925 0.9998703
-## Ctdspl2  1.3933778  3.7103135 11.58590 0.0089310913 0.9998703
-## Il10ra   8.2935828 -1.1359543 13.82215 0.0092392980 0.9998703
-## Gpr17    2.1181542  2.8256340 11.32726 0.0094597850 0.9998703
-## B3gat2  -0.9225449  4.8564532 11.17365 0.0097923640 0.9998703
-## Nnt     -1.7460448  3.4884480 10.80847 0.0106437087 0.9998703
+##                   logFC     logCPM       LR       PValue        FDR
+## Nadsyn1       -8.140952 -0.1856326 20.23596 6.845398e-06 0.07496231
+## Plekhg3        2.821723  2.4615140 19.21165 1.169970e-05 0.07496231
+## Stard9         5.692110 -0.4341469 18.69660 1.532554e-05 0.07496231
+## Il10ra         8.307574 -1.1359543 16.67533 4.435416e-05 0.16271322
+## Piga           2.638569  1.5385751 14.23779 1.611024e-04 0.47280344
+## Ushbp1         7.918531 -1.5724706 13.18878 2.816307e-04 0.68877487
+## Mill2         -4.526715 -1.3626955 12.81546 3.437665e-04 0.72063280
+## Tle6          -9.289217 -1.9395041 11.65911 6.388886e-04 0.99984358
+## RP23-45E20.3  -7.905188 -1.4397776 11.19965 8.181289e-04 0.99984358
+## Rpl9-ps6     -12.073767 -2.0080711 11.01066 9.058948e-04 0.99984358
 ```
 
 No genes have a altered acute stress response in ELS vs normal animals. This is stark contrast with the authors' own conclusions, as the original study reported hundereds of genes being as being altered in their FST response following ELS.
@@ -338,10 +354,10 @@ A similar analysis using [DESeq2 instead of edgeR](DESeq2.Rmd) reaches similar c
 
 Given that the original studies were too underpowered to support their claims and used inappropriate methods to compare  transcriptional responses, we wought to combine the data from both accessions to try to give more robust answers to the questions raised by the authors, in particular:
 
-1. are genes differentially expressed following forces swim stress?
-2. are genes differentially expressed following males and females?
-3. are genes differentially expressed in BDNF Val66Met mice?
-4. are genes differentially expressed following early life stress
+1. are genes differentially translated following forces swim stress?
+2. are genes differentially translated following males and females?
+3. are genes differentially translated in BDNF Val66Met mice?
+4. are genes differentially translated following early life stress
 5. are responses of FST genes altered by sex?
 6. are responses of FST genes altered by BDNF Val66Met?
 7. are responses of FST genes altered by early life stress?
@@ -350,7 +366,7 @@ Given that the original studies were too underpowered to support their claims an
 
 ## Additive model
 
-Let's run an overarching analysis over all data to determine if there are any significant effects for forces swim stress (=FST), Sex, Genotype or early life stress (=ELS). In the process we also remove technical variabilty to increase the chance of successfully find candidate genes.
+Let's run an overarching analysis over all data to determine if there are any significant effects for forces swim stress (=FST), Sex, Genotype or early life stress (=ELS). In the process we also remove technical variabilty to increase the chance of successfully find candidate genes. Here, we use a glmQL model in order to better correct for type I errors.
 
 
 ```r
@@ -369,7 +385,7 @@ se <- dosvacor(se, form = ~FST + Sex + Genotype + Set + ELS, form0 = ~Set)
 
 ```r
 #experimental design, full additive model
-design <- model.matrix(~ se$SV1 + se$SV2 + se$FST + se$Sex + 
+design <- model.matrix(~ se$SV1 + se$SV2 + se$SV3 + se$FST + se$Sex + 
                          se$Genotype + se$Set + se$ELS )
 
 y <- DGEList(counts=assays(se)$counts)
@@ -384,7 +400,7 @@ for(i in colnames(design)[-1]){
 }
 ```
 
-### Are genes differentially expressed following forces swim stress?
+### Are genes differentially translated following forces swim stress?
 
 ```r
 se <- se[,order(se$FST)]
@@ -406,38 +422,41 @@ topTags(Results$`se$FSTFST`, p.value = 0.05, n = 30)
 ```
 ## Coefficient:  se$FSTFST 
 ##                 logFC      logCPM         F       PValue          FDR
-## Egr4        1.3909903  5.70016391 248.54276 3.623333e-11 5.385360e-07
-## Fosb        1.6205554  4.22458623 180.68613 3.917819e-10 2.911527e-06
-## Egr2        2.4712502  2.25407674 169.17155 6.363083e-10 3.152484e-06
-## Fos         2.0812762  4.90687320 131.34235 4.001560e-09 1.313097e-05
-## Dusp5       0.9239038  5.63316577 129.54470 4.417335e-09 1.313097e-05
-## Egr1        0.9820385  8.09767364 107.93448 1.613130e-08 3.995991e-05
-## Sik1        1.0261773  3.49221591  86.56453 7.432013e-08 1.578029e-04
-## Nr4a1       1.0498061  6.53486269  84.82730 8.532111e-08 1.585160e-04
-## Arc         1.1113185  7.61348181  82.44917 1.034763e-07 1.708853e-04
-## Junb        0.8974732  6.61591751  62.38975 6.546295e-07 9.729759e-04
-## Gadd45b     0.6835718  4.63136704  59.82023 8.578679e-07 1.159135e-03
-## Maff        1.5088257 -0.10012265  54.52595 1.544175e-06 1.912590e-03
-## Ier2        0.7915193  3.38772570  49.90465 2.679389e-06 3.063366e-03
-## Midn        0.4970673  5.65169642  49.04289 2.982349e-06 3.095271e-03
-## Fosl2       0.4454683  5.91955449  48.67368 3.123802e-06 3.095271e-03
-## Oaz3        1.2618561 -0.90731711  36.60341 1.686336e-05 1.504367e-02
-## Spry4       0.4856526  4.09487939  36.40948 1.738104e-05 1.504367e-02
-## Npas4       1.2595293  3.31207452  36.10903 1.821880e-05 1.504367e-02
-## Errfi1      0.5028256  6.04492498  33.71093 2.680381e-05 2.096763e-02
-## Syne2      -0.6283157  2.69171710  32.56750 3.244268e-05 2.324393e-02
-## AC123679.2 -0.6227683  3.46040416  32.49527 3.284145e-05 2.324393e-02
-## Trib1       0.7179791  3.45505012  31.80138 3.696701e-05 2.497457e-02
-## Arl4d       0.8660209  4.16803403  30.48057 4.653866e-05 2.897144e-02
-## Csrnp1      0.5147353  3.68885603  30.45115 4.678157e-05 2.897144e-02
-## Sgk1        0.6258634  6.67184864  29.54700 5.499126e-05 3.269340e-02
-## Klf4        1.1676729 -0.05923409  29.03264 6.037966e-05 3.451626e-02
-## Nfil3       0.4235990  4.01220042  27.86773 7.492896e-05 4.124700e-02
+## Egr4        1.3763325  5.69996696 271.17725 2.613587e-11 3.884575e-07
+## Fosb        1.5939943  4.22512087 203.03955 2.204849e-10 1.230608e-06
+## Egr2        2.5189229  2.25835614 199.75180 2.483902e-10 1.230608e-06
+## Sik1        1.0842277  3.49087999 186.74653 4.054620e-10 1.506595e-06
+## Fos         2.1424546  4.90675828 157.94276 1.357847e-09 4.036337e-06
+## Dusp5       0.9302143  5.63293521 135.24829 4.095570e-09 1.014541e-05
+## Nr4a1       1.0909105  6.53490701 111.61093 1.570281e-08 3.334154e-05
+## Egr1        0.9829610  8.09783506 107.57296 2.025511e-08 3.381751e-05
+## Arc         1.1542530  7.61316750 107.40265 2.047753e-08 3.381751e-05
+## Gadd45b     0.7056771  4.63279778  74.25750 2.450426e-07 3.388438e-04
+## Junb        0.9275956  6.61596306  73.99547 2.507759e-07 3.388438e-04
+## Fosl2       0.4243778  5.91927337  66.78176 4.877095e-07 6.040689e-04
+## Arl4d       0.9392704  4.17043954  62.95242 7.114124e-07 7.759527e-04
+## Midn        0.4719433  5.65211023  62.68537 7.308980e-07 7.759527e-04
+## Ier5        0.4552744  6.35415703  54.11106 1.836552e-06 1.810796e-03
+## Maff        1.5236033 -0.09340333  53.59057 1.949320e-06 1.810796e-03
+## Per1        0.5599399  6.23132349  51.41371 2.513724e-06 2.197734e-03
+## Ier2        0.7775034  3.39046862  50.36234 2.850832e-06 2.353995e-03
+## Ppp1r3g     0.8944428  2.92435435  45.80922 5.039660e-06 3.942340e-03
+## Spry4       0.4622725  4.09595448  43.02060 7.301071e-06 5.425791e-03
+## AC123679.2 -0.6516973  3.46271975  39.62031 1.176666e-05 8.327997e-03
+## Sgk1        0.6525801  6.67172638  37.56730 1.593096e-05 1.076281e-02
+## Mfsd2a      1.1623871  1.61247631  37.20411 1.682922e-05 1.087533e-02
+## Npas4       1.2249991  3.30406700  36.57144 1.853392e-05 1.147790e-02
+## Errfi1      0.5098346  6.04496283  35.55216 2.170654e-05 1.290497e-02
+## Klf4        1.2173273 -0.05173331  34.75216 2.462893e-05 1.407922e-02
+## Oaz3        1.2250014 -0.90753304  33.21588 3.157592e-05 1.738196e-02
+## Pim3        0.3712780  5.48950727  32.45968 3.579055e-05 1.899839e-02
+## Coq10b      0.3510045  4.95274256  31.89618 3.934544e-05 1.973784e-02
+## Trib1       0.6941620  3.45398865  31.57881 4.152221e-05 1.973784e-02
 ```
 
 There are multiple candidate genes that are significantly altered by acute stress across.
 
-### Are genes differentially expressed between males and females?
+### Are genes differentially translated between males and females?
 
 ```r
 se <- se[,order(se$Sex)]
@@ -457,44 +476,41 @@ sehm(se, rownames(topTags(Results$`se$Sexfemale`,p.value = 0.05, n = 1000)), do.
 ![](figures/README-unnamed-chunk-20-2.png)<!-- -->
 
 ```r
-topTags(Results$`se$FSTFST`,p.value = 0.05, n = 1000)
+topTags(Results$`se$Sexfemale`,p.value = 0.05, n = 30)
 ```
 
 ```
-## Coefficient:  se$FSTFST 
-##                 logFC      logCPM         F       PValue          FDR
-## Egr4        1.3909903  5.70016391 248.54276 3.623333e-11 5.385360e-07
-## Fosb        1.6205554  4.22458623 180.68613 3.917819e-10 2.911527e-06
-## Egr2        2.4712502  2.25407674 169.17155 6.363083e-10 3.152484e-06
-## Fos         2.0812762  4.90687320 131.34235 4.001560e-09 1.313097e-05
-## Dusp5       0.9239038  5.63316577 129.54470 4.417335e-09 1.313097e-05
-## Egr1        0.9820385  8.09767364 107.93448 1.613130e-08 3.995991e-05
-## Sik1        1.0261773  3.49221591  86.56453 7.432013e-08 1.578029e-04
-## Nr4a1       1.0498061  6.53486269  84.82730 8.532111e-08 1.585160e-04
-## Arc         1.1113185  7.61348181  82.44917 1.034763e-07 1.708853e-04
-## Junb        0.8974732  6.61591751  62.38975 6.546295e-07 9.729759e-04
-## Gadd45b     0.6835718  4.63136704  59.82023 8.578679e-07 1.159135e-03
-## Maff        1.5088257 -0.10012265  54.52595 1.544175e-06 1.912590e-03
-## Ier2        0.7915193  3.38772570  49.90465 2.679389e-06 3.063366e-03
-## Midn        0.4970673  5.65169642  49.04289 2.982349e-06 3.095271e-03
-## Fosl2       0.4454683  5.91955449  48.67368 3.123802e-06 3.095271e-03
-## Oaz3        1.2618561 -0.90731711  36.60341 1.686336e-05 1.504367e-02
-## Spry4       0.4856526  4.09487939  36.40948 1.738104e-05 1.504367e-02
-## Npas4       1.2595293  3.31207452  36.10903 1.821880e-05 1.504367e-02
-## Errfi1      0.5028256  6.04492498  33.71093 2.680381e-05 2.096763e-02
-## Syne2      -0.6283157  2.69171710  32.56750 3.244268e-05 2.324393e-02
-## AC123679.2 -0.6227683  3.46040416  32.49527 3.284145e-05 2.324393e-02
-## Trib1       0.7179791  3.45505012  31.80138 3.696701e-05 2.497457e-02
-## Arl4d       0.8660209  4.16803403  30.48057 4.653866e-05 2.897144e-02
-## Csrnp1      0.5147353  3.68885603  30.45115 4.678157e-05 2.897144e-02
-## Sgk1        0.6258634  6.67184864  29.54700 5.499126e-05 3.269340e-02
-## Klf4        1.1676729 -0.05923409  29.03264 6.037966e-05 3.451626e-02
-## Nfil3       0.4235990  4.01220042  27.86773 7.492896e-05 4.124700e-02
+## Coefficient:  se$Sexfemale 
+##                logFC    logCPM          F       PValue          FDR
+## Ddx3y    -12.2457032  4.145685 1279.09472 1.872375e-12 2.782911e-08
+## Eif2s3y  -11.9705761  3.472145  684.16227 5.086900e-11 3.780330e-07
+## Uty      -11.2448719  2.663029  414.66507 7.000105e-10 3.468085e-06
+## Kdm5d     -3.4445982  1.963235  139.38949 3.308488e-09 1.111362e-05
+## Prl       14.0460151  3.320776  137.00361 3.738688e-09 1.111362e-05
+## Gh        17.7719374  3.429231   87.81891 1.408628e-07 3.489406e-04
+## Mthfd1     0.8049886  5.046165   50.59195 2.773064e-06 5.888007e-03
+## Fosl2     -0.6841784  5.919273   45.18028 5.470748e-06 1.016397e-02
+## Rtcb       1.0271902  6.783180   42.23899 8.126773e-06 1.342091e-02
+## Mical3    -2.1683938  5.652877   40.15179 1.089951e-05 1.619994e-02
+## Apba2      1.4954387  7.025591   39.43381 1.208921e-05 1.633472e-02
+## Midn      -0.6880297  5.652110   36.30490 1.930981e-05 2.391681e-02
+## Anxa6      0.5930852  7.233996   35.08858 2.334902e-05 2.522080e-02
+## Gtf2f2     0.9030931  4.609061   34.65444 2.501541e-05 2.522080e-02
+## Ddx3x      0.7210282  7.954373   34.54577 2.545327e-05 2.522080e-02
+## Sox6      -0.9920554  3.502974   32.83303 3.363522e-05 3.124502e-02
+## Kcnh7     -1.0514389  4.889268   31.08051 4.521984e-05 3.953544e-02
+## Faf1       0.5628047  4.972084   30.12935 5.335815e-05 4.401968e-02
+## Mtcl1     -0.7383166  4.807732   29.48639 5.979548e-05 4.401968e-02
+## Olfr1284   6.6872344 -1.357971   29.34094 6.137065e-05 4.401968e-02
+## Eif2s3x    0.5629175  7.330806   29.03862 6.479691e-05 4.401968e-02
+## Dclk1     -0.6567687  9.539226   29.00787 6.515730e-05 4.401968e-02
+## Zfp536    -1.0426489  3.795336   28.39023 7.289872e-05 4.626965e-02
+## Pwp1       0.5485033  4.371487   28.25612 7.471382e-05 4.626965e-02
 ```
 
 There are multiple candidate genes that are significantly different between sexes.
 
-### Are genes differentially expressed in BDNF Val66Met mice?
+### Are genes differentially translated in BDNF Val66Met mice?
 
 ```r
 se <- se[,order(se$Genotype)]
@@ -510,21 +526,21 @@ topTags(Results$`se$GenotypeBDNFMET`)
 ```
 ## Coefficient:  se$GenotypeBDNFMET 
 ##                    logFC     logCPM        F       PValue        FDR
-## RP23-142A14.4 -1.8645921  3.4811485 44.06554 5.704946e-06 0.08479262
-## Bloc1s6        1.6674696  3.6050358 31.65069 3.793821e-05 0.28193779
-## Cd59a         -1.6998055  1.9503644 26.14194 1.043385e-04 0.46767278
-## Syne2         -0.8299338  2.6917171 24.66024 1.402535e-04 0.46767278
-## Luzp1          0.4310999  7.1665723 23.77862 1.681553e-04 0.46767278
-## RP23-78D19.4  -3.1906937 -0.1039192 23.06230 1.954795e-04 0.46767278
-## Pagr1a         0.9062183  4.3737664 22.44699 2.229922e-04 0.46767278
-## Strc          -1.5909661  0.4515971 21.88973 2.517246e-04 0.46767278
-## Acd           -1.2307210  2.5662807 19.99017 3.861265e-04 0.63766646
-## Tcp11l1        1.0844059  2.8502768 19.10805 4.748989e-04 0.70584225
+## Rgs11         -4.6511215  0.2104091 48.21259 3.711469e-06 0.05516356
+## RP23-142A14.4 -1.8071962  3.4790589 42.16552 8.209665e-06 0.06101012
+## Bloc1s6        1.5936424  3.6062060 35.41432 2.218087e-05 0.08591861
+## Acd           -1.3563730  2.5652668 35.15020 2.312282e-05 0.08591861
+## Cd59a         -1.7810995  1.9488758 32.74488 3.413058e-05 0.10145656
+## RP23-78D19.4  -3.5828154 -0.0953865 28.23119 7.505694e-05 0.18592854
+## Pagr1a         0.9420877  4.3777579 26.83422 9.745092e-05 0.20691615
+## Luzp1          0.4153836  7.1665120 24.92725 1.412671e-04 0.25865392
+## Syne2         -0.8337838  2.6697078 23.99343 1.705811e-04 0.25865392
+## Gm47283       -1.0136483  4.6338862 23.89576 1.740254e-04 0.25865392
 ```
 
 No genes pass multiple testing correction.
 
-### Are genes differentially expressed following early life stress?
+### Are genes differentially translated following early life stress?
 
 ```r
 se <- se[,order(se$ELS)]
@@ -539,24 +555,24 @@ topTags(Results$`se$ELSELS`)
 
 ```
 ## Coefficient:  se$ELSELS 
-##                    logFC    logCPM        F       PValue FDR
-## Prl            4.7519341  3.326017 27.64812 7.809371e-05   1
-## RP24-235B15.9 -3.3854315 -1.720237 24.51577 1.741350e-04   1
-## Ppia           0.4114268  8.713957 20.62432 3.338593e-04   1
-## Preb          -0.3006047  6.029369 20.50177 3.433042e-04   1
-## Cic           -0.4093224  5.881495 19.99192 3.859701e-04   1
-## Gh             4.7488135  3.434262 18.82632 5.079431e-04   1
-## Uqcc1          0.7000684  4.324896 18.05231 6.129142e-04   1
-## Apol7b        13.7335130 -1.331643 88.04290 7.208234e-04   1
-## Srsf3          0.3121362  7.364505 15.82465 1.081133e-03   1
-## Slbp           0.4192394  5.175941 15.43295 1.199927e-03   1
+##                    logFC     logCPM        F       PValue       FDR
+## Lenep          9.1125460 -0.1873914 55.50044 9.109365e-06 0.1353925
+## Ppia           0.4174777  8.7140180 26.71247 9.973610e-05 0.4865339
+## Preb          -0.3007035  6.0293637 24.57269 1.516694e-04 0.4865339
+## Prl            4.9369977  3.3207763 24.23936 1.622442e-04 0.4865339
+## Gh             8.1879717  3.4292305 25.17719 1.636728e-04 0.4865339
+## Cic           -0.4086550  5.8799801 21.90940 2.643998e-04 0.5800735
+## RP24-235B15.9 -3.5726302 -1.7079165 26.29741 2.731962e-04 0.5800735
+## Srsf3          0.3135256  7.3648071 20.16951 3.889850e-04 0.7015321
+## Mfn1          -0.3213889  5.3104408 19.78472 4.247991e-04 0.7015321
+## Nrsn1         -0.4522485  7.6124562 18.95025 5.160413e-04 0.7121992
 ```
 
 No genes pass multiple testing correction
 
 ## Interactive models
 
-To futher investigate if across all samples there is any variable that interacts with acute stress we will run a series of models that incorporate an interaction term between acute stress and any of the variables
+To futher investigate if across all samples there is any variable that interacts with acute stress we will run a series of models that incorporate an interaction term between acute stress and any of the variables. Here, we use a glmQL models in order to better correct for type I errors.
 
 ### Is the response to FST significantly different between sexes?
 
@@ -602,16 +618,16 @@ topTags(Results$`se$FSTFST:se$Sexfemale`)
 ```
 ## Coefficient:  se$FSTFST:se$Sexfemale 
 ##                     logFC     logCPM        F       PValue       FDR
-## Lenep          -14.599213 -0.2170693 67.49934 9.684257e-06 0.1439371
-## Khnyn           10.247580 -0.2975998 35.27467 5.005766e-05 0.3720035
-## RP23-383I16.10 -15.957452 -2.1382387 30.53578 7.588132e-05 0.3759414
-## Gm7334          -6.634124  2.1130987 24.73599 1.687154e-04 0.6269044
-## Fam188a          1.381835  4.3913610 21.65483 3.153798e-04 0.8644901
-## Ccdc152          3.268591  1.2683459 20.60645 3.952075e-04 0.8644901
-## Kif23            4.598597 -1.7584236 19.73581 4.792547e-04 0.8644901
-## RP24-212K17.7   18.195142 -2.3507779 28.32483 4.906549e-04 0.8644901
-## mt-Nd3          30.084858 -1.5780575 23.13866 5.529028e-04 0.8644901
-## Adamts10        28.656276 -1.7537851 24.58872 5.816390e-04 0.8644901
+## Lenep          -14.588936 -0.2170780 67.56013 9.647456e-06 0.1433901
+## Khnyn           10.253107 -0.2975935 35.18569 5.067736e-05 0.3741113
+## RP23-383I16.10 -15.955062 -2.1382336 30.56646 7.551193e-05 0.3741113
+## Gm7334          -6.634741  2.1130978 24.74436 1.684480e-04 0.6259105
+## Fam188a          1.381227  4.3913609 21.64146 3.162871e-04 0.8764231
+## Ccdc152          3.269997  1.2683472 20.59483 3.962263e-04 0.8764231
+## Kif23            4.601143 -1.7584240 19.73626 4.792222e-04 0.8764231
+## RP24-212K17.7   18.211739 -2.3507779 28.34152 4.896869e-04 0.8764231
+## mt-Nd3          30.108212 -1.5780609 23.12701 5.540057e-04 0.8764231
+## Adamts10        28.656971 -1.7537899 24.49702 5.896677e-04 0.8764231
 ```
 
 No genes pass multiple testing correction
@@ -639,10 +655,8 @@ design <- model.matrix(~se$SV1 + se$SV2 + se$FST + se$Sex + se$Genotype + se$Set
 y <- DGEList(counts=assays(se)$counts)
 y <- calcNormFactors(y)
 y <- estimateDisp(y,design)
+y <- y[filterByExpr(y, design),]
 
-#filter out genes that are below 10 counts in more than 75% of samples
-keep <- rowSums(y$counts>10) >= (ncol(y) * 0.25)
-y <- y[keep, , keep.lib.sizes=FALSE]
 
 Results <- list()
 fit <- glmQLFit(y,design)
@@ -671,27 +685,27 @@ topTags(Results$`se$FSTFST:se$GenotypeBDNFMET`, p.value = 0.05, n = 20)
 
 ```
 ## Coefficient:  se$FSTFST:se$GenotypeBDNFMET 
-##                 logFC    logCPM        F       PValue        FDR
-## Sema5b       1.589504 3.1002778 53.25207 2.662099e-06 0.02402816
-## Setx        -1.610772 6.2614093 41.74295 1.087556e-05 0.02402816
-## Ylpm1       -1.677711 4.8383259 40.31329 1.321697e-05 0.02402816
-## Nav2        -1.826541 4.9077343 40.27779 1.328200e-05 0.02402816
-## RP23-35L3.1 -1.499761 5.8201101 39.09743 1.566528e-05 0.02402816
-## Gprasp1     -2.167728 8.7920818 38.51978 1.700607e-05 0.02402816
-## Synm        -1.205959 5.6141909 36.55174 2.265496e-05 0.02402816
-## Tjp1        -1.141106 5.6323973 36.41568 2.311828e-05 0.02402816
-## Helz        -1.125346 5.2411185 36.33570 2.339562e-05 0.02402816
-## Lman2l       1.521805 4.9305293 35.85896 2.512932e-05 0.02402816
-## Arid1a      -1.635696 6.3824389 35.69009 2.577804e-05 0.02402816
-## Nefm        -1.389742 8.3417690 35.52163 2.644422e-05 0.02402816
-## Akap8       -1.064369 5.1655984 35.15457 2.796445e-05 0.02402816
-## Ryr2        -2.202940 7.5287385 35.02007 2.854616e-05 0.02402816
-## Lrrcc1      -1.369450 3.8476295 34.86812 2.921994e-05 0.02402816
-## Unc13a      -1.710706 8.3814262 34.42316 3.129907e-05 0.02402816
-## Hecw1       -1.026059 5.3451302 33.75159 3.476301e-05 0.02402816
-## Mdn1        -2.743463 4.5352989 33.71633 3.495658e-05 0.02402816
-## Dync1h1     -4.202741 9.2112791 33.61379 3.552643e-05 0.02402816
-## Cfap54      -2.706673 0.4676213 33.49677 3.618965e-05 0.02402816
+##                 logFC   logCPM        F       PValue        FDR
+## Sema5b       1.588439 3.100278 53.10901 2.644958e-06 0.02434796
+## Setx        -1.611493 6.261409 41.78315 1.061980e-05 0.02434796
+## Ylpm1       -1.678628 4.838326 40.37382 1.287506e-05 0.02434796
+## Nav2        -1.827796 4.907734 40.33855 1.293809e-05 0.02434796
+## RP23-35L3.1 -1.501117 5.820110 39.13526 1.531347e-05 0.02434796
+## Gprasp1     -2.168733 8.792082 38.60865 1.650588e-05 0.02434796
+## Synm        -1.206736 5.614191 36.53304 2.235000e-05 0.02434796
+## Tjp1        -1.142193 5.632397 36.40322 2.278723e-05 0.02434796
+## Helz        -1.126191 5.241119 36.30569 2.312210e-05 0.02434796
+## Lman2l       1.521352 4.930529 35.86766 2.469652e-05 0.02434796
+## Arid1a      -1.635858 6.382439 35.74300 2.516656e-05 0.02434796
+## Nefm        -1.389846 8.341769 35.55507 2.589450e-05 0.02434796
+## Akap8       -1.064965 5.165599 35.11712 2.768541e-05 0.02434796
+## Ryr2        -2.204308 7.528739 35.09841 2.776499e-05 0.02434796
+## Lrrcc1      -1.369881 3.847630 34.83687 2.890507e-05 0.02434796
+## Unc13a      -1.711745 8.381426 34.48481 3.052458e-05 0.02434796
+## Mdn1        -2.744802 4.535299 33.80619 3.394536e-05 0.02434796
+## Dync1h1     -4.204209 9.211279 33.72648 3.437497e-05 0.02434796
+## Hecw1       -1.027095 5.345130 33.70483 3.449271e-05 0.02434796
+## Trio        -1.280178 6.932633 33.47187 3.578909e-05 0.02434796
 ```
 
 There are multiple genes that pass multiple testing correction. However, the data for these still looks noisy and genes that show up are highly co-expressed. The low replicate number might have impaired the ability to remove technical variability sufficiently for the Genotype:FST assessment, so the results should be interpreted with caution and more replicates would be needed.
@@ -719,10 +733,7 @@ design <- model.matrix(~se$SV1 + se$SV2 + se$FST + se$Sex + se$Genotype + se$Set
 y <- DGEList(counts=assays(se)$counts)
 y <- calcNormFactors(y)
 y <- estimateDisp(y,design)
-
-#filter out genes that are below 10 counts in more than 75% of samples
-keep <- rowSums(y$counts>10) >= (ncol(y) * 0.25)
-y <- y[keep, , keep.lib.sizes=FALSE]
+y <- y[filterByExpr(y, design),]
 
 Results <- list()
 fit <- glmQLFit(y,design)
@@ -742,17 +753,17 @@ topTags(Results$`se$FSTFST:se$ELSELS`)
 
 ```
 ## Coefficient:  se$FSTFST:se$ELSELS 
-##                    logFC     logCPM        F      PValue       FDR
-## Parpbp         1.9438840 -0.8135980 14.26395 0.001863676 0.9999497
-## Flt1          -1.8200424  0.8068718 14.03146 0.001984581 0.9999497
-## Snx18          0.6910069  3.8035525 13.53655 0.002272990 0.9999497
-## Hmga2         -1.4611426 -0.7556462 12.29637 0.003231691 0.9999497
-## Poglut1       -0.7840360  4.3601522 11.89930 0.003630971 0.9999497
-## Hist3h2a      -0.4772987  6.0135222 11.79418 0.003745915 0.9999497
-## Fchsd2         0.4539088  5.0380513 11.64931 0.003911215 0.9999497
-## RP24-219P17.2  4.2635886 -0.7538119 11.43099 0.004176323 0.9999497
-## Tpm2          -0.8469294  2.1901141 11.20516 0.004472399 0.9999497
-## Kcna6         -3.2721363  2.8552904 11.02094 0.004731772 0.9999497
+##                    logFC     logCPM        F      PValue FDR
+## Snx18          0.6895493  3.8035501 13.95823 0.002013605   1
+## Parpbp         1.9365021 -0.8136012 13.92290 0.002033118   1
+## Flt1          -1.8155464  0.8068678 13.90863 0.002041060   1
+## Olfr133       -3.2737624 -1.6858762 12.64240 0.002910296   1
+## RP24-300L5.2  -8.0118520 -1.3587377 17.54642 0.003154339   1
+## Poglut1       -0.7827461  4.3601521 12.11607 0.003390993   1
+## Hmga2         -1.4548305 -0.7556480 11.92536 0.003587100   1
+## Hist3h2a      -0.4795635  6.0135226 11.74420 0.003785455   1
+## Fchsd2         0.4524863  5.0380511 11.52278 0.004045149   1
+## RP24-219P17.2  4.2291993 -0.7538250 11.31275 0.004310440   1
 ```
 
 No genes pass multiple testing correction.
@@ -775,65 +786,67 @@ sessionInfo()
 ```
 ## R version 3.6.1 (2019-07-05)
 ## Platform: x86_64-pc-linux-gnu (64-bit)
-## Running under: Ubuntu 18.04.3 LTS
+## Running under: Ubuntu 18.04 LTS
 ## 
 ## Matrix products: default
 ## BLAS:   /usr/lib/x86_64-linux-gnu/openblas/libblas.so.3
 ## LAPACK: /usr/lib/x86_64-linux-gnu/libopenblasp-r0.2.20.so
 ## 
 ## locale:
-##  [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
-##  [3] LC_TIME=de_CH.UTF-8        LC_COLLATE=en_US.UTF-8    
-##  [5] LC_MONETARY=de_CH.UTF-8    LC_MESSAGES=en_US.UTF-8   
-##  [7] LC_PAPER=de_CH.UTF-8       LC_NAME=C                 
-##  [9] LC_ADDRESS=C               LC_TELEPHONE=C            
-## [11] LC_MEASUREMENT=de_CH.UTF-8 LC_IDENTIFICATION=C       
+##  [1] LC_CTYPE=C.UTF-8       LC_NUMERIC=C           LC_TIME=C.UTF-8       
+##  [4] LC_COLLATE=C.UTF-8     LC_MONETARY=C.UTF-8    LC_MESSAGES=C.UTF-8   
+##  [7] LC_PAPER=C.UTF-8       LC_NAME=C              LC_ADDRESS=C          
+## [10] LC_TELEPHONE=C         LC_MEASUREMENT=C.UTF-8 LC_IDENTIFICATION=C   
 ## 
 ## attached base packages:
 ## [1] parallel  stats4    stats     graphics  grDevices utils     datasets 
 ## [8] methods   base     
 ## 
 ## other attached packages:
-##  [1] DESeq2_1.25.10              sva_3.33.1                 
-##  [3] genefilter_1.67.1           mgcv_1.8-28                
-##  [5] nlme_3.1-142                SummarizedExperiment_1.16.1
-##  [7] DelayedArray_0.11.4         BiocParallel_1.19.2        
-##  [9] matrixStats_0.55.0          Biobase_2.45.1             
-## [11] GenomicRanges_1.38.0        GenomeInfoDb_1.21.1        
-## [13] IRanges_2.19.14             S4Vectors_0.23.21          
-## [15] BiocGenerics_0.31.5         SEtools_1.2.2              
-## [17] edgeR_3.27.13               limma_3.41.15              
+##  [1] DESeq2_1.26.0               sva_3.34.0                 
+##  [3] genefilter_1.68.0           mgcv_1.8-31                
+##  [5] nlme_3.1-145                SummarizedExperiment_1.16.1
+##  [7] DelayedArray_0.12.2         BiocParallel_1.20.1        
+##  [9] matrixStats_0.55.0          Biobase_2.46.0             
+## [11] GenomicRanges_1.38.0        GenomeInfoDb_1.22.0        
+## [13] IRanges_2.20.2              S4Vectors_0.24.3           
+## [15] BiocGenerics_0.32.0         SEtools_1.2.2              
+## [17] edgeR_3.28.1                limma_3.42.2               
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] Rtsne_0.15             colorspace_1.4-1       rjson_0.2.20          
-##  [4] circlize_0.4.7         htmlTable_1.13.1       XVector_0.25.0        
-##  [7] GlobalOptions_0.1.0    base64enc_0.1-3        clue_0.3-57           
-## [10] rstudioapi_0.10        bit64_0.9-7            AnnotationDbi_1.47.1  
-## [13] codetools_0.2-16       splines_3.6.1          geneplotter_1.63.0    
-## [16] knitr_1.24             zeallot_0.1.0          Formula_1.2-3         
-## [19] jsonlite_1.6           annotate_1.63.0        cluster_2.1.0         
-## [22] png_0.1-7              pheatmap_1.0.12        compiler_3.6.1        
-## [25] backports_1.1.4        assertthat_0.2.1       Matrix_1.2-17         
-## [28] acepack_1.4.1          htmltools_0.3.6        tools_3.6.1           
-## [31] gtable_0.3.0           glue_1.3.1             GenomeInfoDbData_1.2.1
-## [34] dplyr_0.8.3            V8_2.3                 Rcpp_1.0.4.6          
-## [37] vctrs_0.2.0            iterators_1.0.12       xfun_0.9              
-## [40] stringr_1.4.0          openxlsx_4.1.0.1       XML_3.98-1.20         
-## [43] zlibbioc_1.31.0        scales_1.0.0           TSP_1.1-7             
-## [46] RColorBrewer_1.1-2     ComplexHeatmap_2.5.3   yaml_2.2.0            
-## [49] curl_4.0               memoise_1.1.0.9000     gridExtra_2.3         
-## [52] ggplot2_3.3.0          rpart_4.1-15           latticeExtra_0.6-28   
-## [55] stringi_1.4.3          RSQLite_2.1.2          randomcoloR_1.1.0     
-## [58] foreach_1.4.7          checkmate_2.0.0        seriation_1.2-8-1     
-## [61] zip_2.0.4              shape_1.4.4            rlang_0.4.0           
-## [64] pkgconfig_2.0.2        bitops_1.0-6           evaluate_0.14         
-## [67] lattice_0.20-38        purrr_0.3.2            htmlwidgets_1.3       
-## [70] bit_1.1-14             tidyselect_0.2.5       magrittr_1.5          
-## [73] R6_2.4.0               Hmisc_4.2-0            DBI_1.0.0             
-## [76] pillar_1.4.2           foreign_0.8-71         survival_2.44-1.1     
-## [79] RCurl_1.95-4.12        nnet_7.3-12            tibble_2.1.3          
-## [82] crayon_1.3.4           rmarkdown_1.15         GetoptLong_0.1.7      
-## [85] locfit_1.5-9.1         grid_3.6.1             data.table_1.12.8     
-## [88] blob_1.2.0             digest_0.6.20          xtable_1.8-4          
-## [91] munsell_0.5.0          registry_0.5-1
+##   [1] Rtsne_0.15             colorspace_1.4-1       rjson_0.2.20          
+##   [4] htmlTable_1.13.3       circlize_0.4.8         XVector_0.26.0        
+##   [7] GlobalOptions_0.1.1    base64enc_0.1-3        rstudioapi_0.11       
+##  [10] clue_0.3-57            farver_2.0.3           bit64_0.9-7           
+##  [13] AnnotationDbi_1.48.0   codetools_0.2-16       splines_3.6.1         
+##  [16] geneplotter_1.64.0     knitr_1.28             Formula_1.2-3         
+##  [19] jsonlite_1.6.1         annotate_1.64.0        cluster_2.1.0         
+##  [22] png_0.1-7              pheatmap_1.0.12        compiler_3.6.1        
+##  [25] backports_1.1.5        assertthat_0.2.1       Matrix_1.2-18         
+##  [28] lazyeval_0.2.2         acepack_1.4.1          htmltools_0.4.0       
+##  [31] tools_3.6.1            gtable_0.3.0           glue_1.4.2            
+##  [34] GenomeInfoDbData_1.2.2 dplyr_0.8.4            V8_3.0.1              
+##  [37] Rcpp_1.0.3             vctrs_0.2.3            gdata_2.18.0          
+##  [40] iterators_1.0.12       xfun_0.12              stringr_1.4.0         
+##  [43] openxlsx_4.1.4         lifecycle_0.1.0        gtools_3.8.2          
+##  [46] XML_3.99-0.3           dendextend_1.13.4      zlibbioc_1.32.0       
+##  [49] MASS_7.3-51.5          scales_1.1.0           TSP_1.1-9             
+##  [52] RColorBrewer_1.1-2     ComplexHeatmap_2.2.0   yaml_2.2.1            
+##  [55] curl_4.3               memoise_1.1.0          gridExtra_2.3         
+##  [58] ggplot2_3.2.1          rpart_4.1-15           latticeExtra_0.6-29   
+##  [61] stringi_1.4.6          RSQLite_2.2.0          randomcoloR_1.1.0.1   
+##  [64] gclus_1.3.2            foreach_1.4.8          checkmate_2.0.0       
+##  [67] seriation_1.2-8        caTools_1.18.0         zip_2.0.4             
+##  [70] shape_1.4.4            rlang_0.4.5            pkgconfig_2.0.3       
+##  [73] bitops_1.0-6           evaluate_0.14          lattice_0.20-40       
+##  [76] purrr_0.3.3            htmlwidgets_1.5.1      bit_1.1-15.2          
+##  [79] tidyselect_1.0.0       magrittr_1.5           R6_2.4.1              
+##  [82] gplots_3.0.3           Hmisc_4.3-1            DBI_1.1.0             
+##  [85] foreign_0.8-76         pillar_1.4.3           nnet_7.3-13           
+##  [88] survival_3.1-8         RCurl_1.98-1.1         tibble_2.1.3          
+##  [91] crayon_1.3.4           KernSmooth_2.23-16     rmarkdown_2.1         
+##  [94] viridis_0.5.1          jpeg_0.1-8.1           GetoptLong_0.1.8      
+##  [97] locfit_1.5-9.4         grid_3.6.1             data.table_1.12.8     
+## [100] blob_1.2.1             digest_0.6.25          xtable_1.8-4          
+## [103] munsell_0.5.0          registry_0.5-1         viridisLite_0.3.0
 ```

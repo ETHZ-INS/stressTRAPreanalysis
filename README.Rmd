@@ -34,7 +34,10 @@ We show that a number of the analyses and claims made in these publications are 
 
 
 ***
-  
+
+# Methods
+
+We acquired the deposited raw sequencing fastq files from the online repositories GSE100579 (10 sequencing runs for (Marrocco et al. 2017, Gray et al. 2018) and GSE131972 (sequencing 10 runs for (Marrocco et al. 2019)) and used kallisto (DOI:10.1038/nbt.3519, version 0.44.0) for the pseudoalignment of reads on the GENCODE M17 transcriptome, with an estimated fragment length of 200 ±20. GENsOME ALIGNMENT SPECIFICS
 
 # Re-analysis of published results
 
@@ -48,6 +51,7 @@ library(sva)
 library(DESeq2)
 source("misc.R")
 kallistodata <- readRDS("data/AllData.kallisto.SE.rds")
+set.seed(12345)
 ```
 
 Because we later provide a meta-analysis of the datasets, we will work on a uniform, [kallisto](https://pachterlab.github.io/kallisto/about)-based quantification.
@@ -98,7 +102,7 @@ sehm(se, genes, do.scale=T, assayName="logcpm", cluster_rows = T, gaps_at = "Set
      anno_columns=c("ELS","FST","Genotype","Sex","Set"), main="Same genes across all samples")
 ```
 
-The high co-expression of the reported genes suggests that the variability is the result of a single vector of variation, whih could be either technical, but is in any case unrelated to the experimental design. To investigate this, we attempt to model this vector of variation using Surrogate Variable Analysis ([SVA](https://www.bioconductor.org/packages/release/bioc/html/sva.html) - see the [exact implementation here](misc.R)), and to visualize the reported genes in the corrected data:
+The high co-expression of the reported genes suggests that the variability is the result of a single vector of variation, which could be either technical, but is in any case unrelated to the experimental design. To investigate this, we attempt to model this vector of variation using Surrogate Variable Analysis ([SVA](https://www.bioconductor.org/packages/release/bioc/html/sva.html) - see the [exact implementation here](misc.R)), and to visualize the reported genes in the corrected data:
 
 ```{r}
 se <- dosvacor(se, form = ~ Set + Sex * FST, form0 = ~Set)
@@ -116,7 +120,7 @@ Together, this re-analysis indicates that the reported sex-specific transcriptio
 
 A complete assessment of the findings of Gray et al. 2018 is unfortunately not possible since the repository [GSE100579](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE100579) is missing crucial samples for the chronic stress model for the BDNF Val66Met genotype and only includes samples of acute stress.
 
-However, the authors claim that many genes are differentially regulated between WildType and BDNF Val66Met animals at baseline. While no complete list of genes has been included in the publication, a subset can be found in the publication's [Table 1](https://www.nature.com/articles/mp2016219/tables/1).
+However, the authors claim that many genes are differentially regulated between WildType and BDNF Val66Met animals at baseline, a regulation which is dependent on sex. While no complete list of genes has been included in the publication, a subset can be found in the publication's [Table 1](https://www.nature.com/articles/mp2016219/tables/1).
 
 We plot these genes in the GSE100579 data set:
 
@@ -163,16 +167,16 @@ se <- se[order(rownames(se)),]
 se <- subset(se,select  = se$Set == "GSE131972")
 ```
 
-In their publications the authors unfortunately do not upload a list with differentially expressed genes. However, in their discussion they mention a number of genes that they claim are differentially expressed between ELS and non-ELS mice after acute stress. We look at the expression of these genes across the very samples used in their study:
+In their publications the authors unfortunately do not upload a list with differentially expressed genes. However, in their discussion they mention a number of genes that they claim are differentially expressed between ELS and non-ELS mice after acute stress. We look at the expression of these genes across the very samples used in their study. They claim that selected genes are only induced in non-ELS mice following FST:
 
 ```{r, fig.height=2.5, fig.width=5}
 sehm(se, c("Grin1","Grin2a","Gabbr2","Gabra1"), do.scale=T, assayName="logcpm",
      anno_columns = c("ELS","FST"),  main = "Reported genes")
 ```
 
-In light of the very large intra-group variability of these genes, their any claim on their ELS-dependent activation is dubious.
+In light of the very large intra-group variability of these genes, their any claim on their non-ELS-dependent activation is dubious.
 
-Further, they claim that a restricted set of genes selectively induced by AS in ELS mice but not non-ELS mice.
+Further, they claim that a restricted set of genes selectively induced by FST in ELS mice but not non-ELS mice.
 
 ```{r, fig.height=2.5, fig.width=5}
 sehm(se, c("Per1", "Npy", "Nfkbia", "Penk","Dusp1", "Cst3", "Trib1", "Htra1", "Sdc4", "Plekhf1"), do.scale=T, assayName="logcpm", anno_columns = c("ELS","FST"),  main = "Reported genes")
@@ -190,7 +194,8 @@ For these genes, instead, we concur with the authors that these well-known genes
 
 ### Interaction analysis
 
-To establish whether ELS does impact the transcriptional response to acute stress, it is insufficient to simply analyse the two response separately, as the authors did, and simply substract the sets of significant genes. Instead, we need to rely on linear regression using an interaction term, which is fortunately possible using edgeR's generalized linear models:
+To establish whether ELS does impact the transcriptional response to acute stress, it is insufficient to simply analyse the two response separately, as the authors did, and simply substract the sets of significant genes. Instead, we need to rely on linear regression using an interaction term, which is fortunately possible using edgeR's generalized linear models. Here we use the standard glm which is less stringent and more susceptible to type 1 errors, but has a better sensitivity in low replicate experiments. An analysis with a glmQL model did not yield any significant results.
+
 
 ```{r}
 #experimental design, interactive model
@@ -199,14 +204,12 @@ design <- model.matrix(~se$FST * se$ELS) # identicial to ~FST+ELS+FST:ELS
 y <- DGEList(counts=assays(se)$counts)
 y <- calcNormFactors(y)
 y <- estimateDisp(y,design)
-
-# filter out lowly-expressed genes
 y <- y[filterByExpr(y, design),]
 
 Results <- list()
-fit <- glmQLFit(y,design)
+fit <- glmFit(y,design)
 for(i in colnames(design)[-1]){
-  Results[[i]] <- glmQLFTest(fit, i)
+  Results[[i]] <- glmLRT(fit, i)
 }
 ```
 
@@ -216,14 +219,14 @@ We first ask whether that are genes altered by acute stress:
 topTags(Results$`se$FSTFST`)
 ```
 
-Even though the data looked promising no genes pass mutliple testing correction, most likely owing to the insufficient sample size.
+Even though the data looked promising only one gene passes mutliple testing correction, most likely owing to the insufficient sample size.
 
 We next ask whether there are genes altered by early life stress?
 ```{r}
 topTags(Results$`se$ELSELS`)
 ```
 
-Again, none passes the multiple testing correction.
+Again, only two genes passe the multiple testing correction.
 
 We finally investigate whether there are genes with a significant interaction:
 
@@ -243,10 +246,10 @@ A similar analysis using [DESeq2 instead of edgeR](DESeq2.Rmd) reaches similar c
 
 Given that the original studies were too underpowered to support their claims and used inappropriate methods to compare  transcriptional responses, we wought to combine the data from both accessions to try to give more robust answers to the questions raised by the authors, in particular:
 
-1. are genes differentially expressed following forces swim stress?
-2. are genes differentially expressed following males and females?
-3. are genes differentially expressed in BDNF Val66Met mice?
-4. are genes differentially expressed following early life stress
+1. are genes differentially translated following forces swim stress?
+2. are genes differentially translated following males and females?
+3. are genes differentially translated in BDNF Val66Met mice?
+4. are genes differentially translated following early life stress
 5. are responses of FST genes altered by sex?
 6. are responses of FST genes altered by BDNF Val66Met?
 7. are responses of FST genes altered by early life stress?
@@ -255,14 +258,14 @@ Given that the original studies were too underpowered to support their claims an
 
 ## Additive model
 
-Let's run an overarching analysis over all data to determine if there are any significant effects for forces swim stress (=FST), Sex, Genotype or early life stress (=ELS). In the process we also remove technical variabilty to increase the chance of successfully find candidate genes.
+Let's run an overarching analysis over all data to determine if there are any significant effects for forces swim stress (=FST), Sex, Genotype or early life stress (=ELS). In the process we also remove technical variabilty to increase the chance of successfully find candidate genes. Here, we use a glmQL model in order to better correct for type I errors.
 
 ```{r}
 se <- kallistodata
 se <- dosvacor(se, form = ~FST + Sex + Genotype + Set + ELS, form0 = ~Set)
 
 #experimental design, full additive model
-design <- model.matrix(~ se$SV1 + se$SV2 + se$FST + se$Sex + 
+design <- model.matrix(~ se$SV1 + se$SV2 + se$SV3 + se$FST + se$Sex + 
                          se$Genotype + se$Set + se$ELS )
 
 y <- DGEList(counts=assays(se)$counts)
@@ -277,7 +280,7 @@ for(i in colnames(design)[-1]){
 }
 ```
 
-### Are genes differentially expressed following forces swim stress?
+### Are genes differentially translated following forces swim stress?
 ```{r}
 se <- se[,order(se$FST)]
 sehm(se, rownames(topTags(Results$`se$FSTFST`,p.value = 0.05, n = 1000)), assayName = "corrected", do.scale = TRUE, anno_columns=c("ELS","FST","Genotype","Sex","Set"), main="Significant FST genes with corrected data")
@@ -287,17 +290,17 @@ topTags(Results$`se$FSTFST`, p.value = 0.05, n = 30)
 
 There are multiple candidate genes that are significantly altered by acute stress across.
 
-### Are genes differentially expressed between males and females?
+### Are genes differentially translated between males and females?
 ```{r}
 se <- se[,order(se$Sex)]
 sehm(se, rownames(topTags(Results$`se$Sexfemale`,p.value = 0.05, n = 1000)), assayName = "corrected", do.scale = TRUE, anno_columns=c("ELS","FST","Genotype","Sex","Set"), main="Significant sex genes with corrected data")
 sehm(se, rownames(topTags(Results$`se$Sexfemale`,p.value = 0.05, n = 1000)), do.scale = TRUE, anno_columns=c("ELS","FST","Genotype","Sex","Set"), main="Significant Sex genes with uncorrected data")
-topTags(Results$`se$FSTFST`,p.value = 0.05, n = 1000)
+topTags(Results$`se$Sexfemale`,p.value = 0.05, n = 30)
 ```
 
 There are multiple candidate genes that are significantly different between sexes.
 
-### Are genes differentially expressed in BDNF Val66Met mice?
+### Are genes differentially translated in BDNF Val66Met mice?
 ```{r}
 se <- se[,order(se$Genotype)]
 sehm(se, rownames(topTags(Results$`se$GenotypeBDNFMET`)), assayName = "corrected", do.scale = TRUE, anno_columns=c("ELS","FST","Genotype","Sex","Set"), main="Top10 Genotype genes (not significant!)")
@@ -306,7 +309,7 @@ topTags(Results$`se$GenotypeBDNFMET`)
 
 No genes pass multiple testing correction.
 
-### Are genes differentially expressed following early life stress?
+### Are genes differentially translated following early life stress?
 ```{r}
 se <- se[,order(se$ELS)]
 sehm(se, rownames(topTags(Results$`se$ELSELS`)), assayName = "corrected", do.scale = TRUE, anno_columns=c("ELS","FST","Genotype","Sex","Set"), main="Top10 ELS genes (not significant!)")
@@ -317,7 +320,7 @@ No genes pass multiple testing correction
 
 ## Interactive models
 
-To futher investigate if across all samples there is any variable that interacts with acute stress we will run a series of models that incorporate an interaction term between acute stress and any of the variables
+To futher investigate if across all samples there is any variable that interacts with acute stress we will run a series of models that incorporate an interaction term between acute stress and any of the variables. Here, we use a glmQL models in order to better correct for type I errors.
 
 ### Is the response to FST significantly different between sexes?
 ```{r}
@@ -356,10 +359,8 @@ design <- model.matrix(~se$SV1 + se$SV2 + se$FST + se$Sex + se$Genotype + se$Set
 y <- DGEList(counts=assays(se)$counts)
 y <- calcNormFactors(y)
 y <- estimateDisp(y,design)
+y <- y[filterByExpr(y, design),]
 
-#filter out genes that are below 10 counts in more than 75% of samples
-keep <- rowSums(y$counts>10) >= (ncol(y) * 0.25)
-y <- y[keep, , keep.lib.sizes=FALSE]
 
 Results <- list()
 fit <- glmQLFit(y,design)
@@ -385,10 +386,7 @@ design <- model.matrix(~se$SV1 + se$SV2 + se$FST + se$Sex + se$Genotype + se$Set
 y <- DGEList(counts=assays(se)$counts)
 y <- calcNormFactors(y)
 y <- estimateDisp(y,design)
-
-#filter out genes that are below 10 counts in more than 75% of samples
-keep <- rowSums(y$counts>10) >= (ncol(y) * 0.25)
-y <- y[keep, , keep.lib.sizes=FALSE]
+y <- y[filterByExpr(y, design),]
 
 Results <- list()
 fit <- glmQLFit(y,design)
