@@ -1,14 +1,23 @@
----
-title: "Trap Reanalysis"
-output:
-  html_document:
-    keep_md: yes
-    theme: united
-    toc: yes
-  pdf_document:
-    toc: yes
----
-
+- [Reassessing the effects of acute stress on the translatome of hippocampal neurons](#reassessing-the-effects-of-acute-stress-on-the-translatome-of-hippocampal-neurons)
+  * [About this re-analysis](#about-this-re-analysis)
+- [Methods](#methods)
+- [Re-analysis of published results](#re-analysis-of-published-results)
+  * [Assessment of the reported sex-specific responses from Marrocco et al. 2017](#assessment-of-the-reported-sex-specific-responses-from-marrocco-et-al-2017)
+  * [Assessment of the reported genotype-dependent sex differences from Gray et al. 2018](#assessment-of-the-reported-genotype-dependent-sex-differences-from-gray-et-al-2018)
+  * [Assessment of Marrocco et al. 2019](#assessment-of-marrocco-et-al-2019)
+    + [Visualization of genes reported in the publication](#visualization-of-genes-reported-in-the-publication)
+    + [Interaction analysis](#interaction-analysis)
+- [Meta-Analysis of all data](#meta-analysis-of-all-data)
+  * [Additive model](#additive-model)
+    + [Are genes differentially translated following forces swim stress?](#are-genes-differentially-translated-following-forces-swim-stress-)
+    + [Are genes differentially translated between males and females?](#are-genes-differentially-translated-between-males-and-females-)
+    + [Are genes differentially translated in BDNF Val66Met mice?](#are-genes-differentially-translated-in-bdnf-val66met-mice-)
+    + [Are genes differentially translated following early life stress?](#are-genes-differentially-translated-following-early-life-stress-)
+  * [Interactive models](#interactive-models)
+    + [Is the response to FST significantly different between sexes?](#is-the-response-to-fst-significantly-different-between-sexes-)
+    + [Is the response to FST significantly altered by BDNF Val66Met?](#is-the-response-to-fst-significantly-altered-by-bdnf-val66met-)
+    + [Is the response to FST significantly altered by early life stress?](#is-the-response-to-fst-significantly-altered-by-early-life-stress-)
+- [Conclusion](#conclusion)
 
 
 # Reassessing the effects of acute stress on the translatome of hippocampal neurons
