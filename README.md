@@ -1,16 +1,4 @@
----
-title: "Reassessing the effects of acute stress on the translatome of hippocampal neurons"
-output:
-  html_document:
-    keep_md: yes
-    theme: united
-    toc: yes
-  pdf_document:
-    toc: yes
----
-
-
-
+# Reassessing the effects of acute stress on the translatome of hippocampal neurons
 
 ## About this re-analysis
 
