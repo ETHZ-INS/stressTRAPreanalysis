@@ -1,30 +1,20 @@
-- [Reassessing the effects of acute stress on the translatome of hippocampal neurons](#reassessing-the-effects-of-acute-stress-on-the-translatome-of-hippocampal-neurons)
-  * [About this re-analysis](#about-this-re-analysis)
-- [Methods](#methods)
-- [Re-analysis of published results](#re-analysis-of-published-results)
-  * [Assessment of the reported sex-specific responses from Marrocco et al. 2017](#assessment-of-the-reported-sex-specific-responses-from-marrocco-et-al-2017)
-  * [Assessment of the reported genotype-dependent sex differences from Gray et al. 2018](#assessment-of-the-reported-genotype-dependent-sex-differences-from-gray-et-al-2018)
-  * [Assessment of Marrocco et al. 2019](#assessment-of-marrocco-et-al-2019)
-    + [Visualization of genes reported in the publication](#visualization-of-genes-reported-in-the-publication)
-    + [Interaction analysis](#interaction-analysis)
-- [Meta-Analysis of all data](#meta-analysis-of-all-data)
-  * [Additive model](#additive-model)
-    + [Are genes differentially translated following forces swim stress?](#are-genes-differentially-translated-following-forces-swim-stress-)
-    + [Are genes differentially translated between males and females?](#are-genes-differentially-translated-between-males-and-females-)
-    + [Are genes differentially translated in BDNF Val66Met mice?](#are-genes-differentially-translated-in-bdnf-val66met-mice-)
-    + [Are genes differentially translated following early life stress?](#are-genes-differentially-translated-following-early-life-stress-)
-  * [Interactive models](#interactive-models)
-    + [Is the response to FST significantly different between sexes?](#is-the-response-to-fst-significantly-different-between-sexes-)
-    + [Is the response to FST significantly altered by BDNF Val66Met?](#is-the-response-to-fst-significantly-altered-by-bdnf-val66met-)
-    + [Is the response to FST significantly altered by early life stress?](#is-the-response-to-fst-significantly-altered-by-early-life-stress-)
-- [Conclusion](#conclusion)
+---
+title: "Reassessing the effects of acute stress on the translatome of hippocampal neurons"
+output:
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+  pdf_document:
+    toc: yes
+---
 
 
-# Reassessing the effects of acute stress on the translatome of hippocampal neurons
+
 
 ## About this re-analysis
 
-Here, we outline the re-analysis of two GEO datasets, [GSE100579](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE100579) and [GSE131972](www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE131972), both of which are investigating the effect of acute stress on the translatome of CA3 pyramidal neurons in the mouse hippocampus. The exact annotation of the samples is available at [here](metadata/s2c.csv).
+Here, we outline the re-analysis of two GEO datasets, [GSE100579](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE100579) and [GSE131972](www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE131972), both of which are investigating the effect of acute stress on the translatome (TRAP-seq) of CA3 pyramidal neurons in the mouse hippocampus. The exact annotation of the samples is available at [here](metadata/s2c.csv).
 
 These datasets were used for three separate publications:
 
@@ -35,7 +25,7 @@ Translational profiling of stress-induced neuroplasticity in the CA3 pyramidal n
 * [Marrocco J. et al. 2019](https://doi.org/10.3389/fnbeh.2019.00157); 
 Early Life Stress Restricts Translational Reactivity in CA3 Neurons Associated With Altered Stress Responses in Adulthood; Front. Behav. Neurosci. 
 
-We show that a number of the analyses and claims made in these publications are not supported by the data and not reproducible across the two datasets. The use of appropriate statistical methods to uncover interactions fails to demonstrate significant sexually dimorphic or early-life-dependent responses to stress, highlighting the fact that these studies were seriously underpowered to address such questions.
+We show that a number of the analyses and claims made in these publications are well not supported by the data and not reproducible across the two datasets. The use of appropriate statistical methods to uncover interactions fails to demonstrate significant sexually dimorphic or early-life-dependent responses to stress, highlighting the fact that these studies were underpowered to address such questions.
 
 
 ***
@@ -65,7 +55,7 @@ However, the re-assessment of the authors' original claims were also reproduced 
 
 ## Assessment of the reported sex-specific responses from Marrocco et al. 2017
 
-In the 2017 publication the authors claim that numerous genes are differentially regulated between males and females after acute stress. Unfortunately, they do not include a list with all genes in the publication, but [Table 1](https://www.nature.com/articles/s41467-017-01014-4/tables/1) contains a subsets of genes that are reported as differentially regulated between males and females upon acute stress (forced swim test - FST). First, we inspect the expression pattern of these genes across the runs used in the original publication in WildType animals:
+In the 2017 publication the authors report that numerous genes are differentially regulated between males and females after acute stress. Unfortunately, they do not include a list with all genes in the publication, but [Table 1](https://www.nature.com/articles/s41467-017-01014-4/tables/1) contains a subsets of genes that are reported as differentially regulated between males and females upon acute stress (forced swim test - FST). First, we inspect the expression pattern of these genes across the runs used in the original publication in WildType animals:
 
 
 ```r
@@ -79,7 +69,7 @@ sehm(se, genes, do.scale=T, assayName="logcpm", anno_columns=c("FST","Sex"),
 
 ![](figures/README-unnamed-chunk-2-1.png)<!-- -->
 
-Rows in the plot represent the reported genes, while the columns are samples, and the colors represent variance-scaled log-normalized expression values (i.e. row z-scores). From this plot, it indeed looks like these genes have a very different response to FST in males and females. However, 6 samples is severely underpowered to investigate 4 experimental groups.
+Rows in the plot represent the reported genes, while the columns are samples, and the colors represent variance-scaled log-normalized expression values (i.e. row z-scores). From this plot, it indeed looks like these genes have a very different response to FST in males and females. However, 6 independent samples is insufficient to investigate 4 experimental groups.
 
 The same study also includes males and females from a different genotype (BDNF mutants) exposed to stress, and we can inspect the behavior of those genes in these additional samples: 
 
@@ -95,7 +85,7 @@ sehm(se, genes, do.scale=T, assayName="logcpm", anno_columns=c("FST","Sex","Geno
 
 ![](figures/README-unnamed-chunk-3-1.png)<!-- -->
 
-We here instead observe that the BDNF mutant males appear to have an expression pattern, for the reported genes, which mimics the wildtype females, while the mutant females not exposed to stress have an expression pattern, for those genes, which resembles that of stressed wildtype females. While it is possible the the mutation entirely reverses the expression pattern of thoses genes, most groups are represented by a single sample, and an equally, or arguably more likely explanation would be that these co-expressed genes are the result of random variation unrelated to the experimental variables. To establish this, we can include the second dataset ([GSE131972](www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE131972)):
+We here observe that the BDNF mutant males appear to have an expression pattern, for the reported genes, which mimics the wildtype females, while the mutant females not exposed to stress have an expression pattern, for those genes, which resembles that of stressed wildtype females. While it is possible that the mutation entirely reverses the expression pattern of thoses genes, most groups are represented by a single sample, and an arguably more likely explanation would be that these co-expressed genes are the result of random variation unrelated to the experimental variables. To test this, we can include the second dataset ([GSE131972](www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE131972)):
 
 
 ```r
@@ -111,7 +101,7 @@ sehm(se,genes,do.scale = T,anno_columns = c("FST","Sex","Set"), gaps_at = "Set",
 
 ![](figures/README-unnamed-chunk-4-1.png)<!-- -->
 
-Although the second datasets includes only males, one can immediately notice that, upon stress and with respect to the aforementioned genes, some of the males behave exactly like the males of the first dataset, while others behave exactly like females. It becomes clear, therefore, that these genes are co-expressed and highly variable across all samples, independently of sex, and therefore that the reported sex differences in response to stress are most likely erroneous.
+Although the second dataset includes only males, one can immediately notice that, upon stress and with respect to the aforementioned genes, some of the males behave exactly like the males of the first dataset, while others behave exactly like females. It becomes clear, therefore, that these genes are co-expressed and highly variable across all samples, independently of sex.
 
 If we further visualize these genes across all samples, we find
 
@@ -124,7 +114,7 @@ sehm(se, genes, do.scale=T, assayName="logcpm", cluster_rows = T, gaps_at = "Set
 
 ![](figures/README-unnamed-chunk-5-1.png)<!-- -->
 
-The high co-expression of the reported genes suggests that the variability is the result of a single vector of variation, which could be either technical, but is in any case unrelated to the experimental design. To investigate this, we attempt to model this vector of variation using Surrogate Variable Analysis ([SVA](https://www.bioconductor.org/packages/release/bioc/html/sva.html) - see the [exact implementation here](misc.R)), and to visualize the reported genes in the corrected data:
+The high co-expression of the reported genes suggests that the variability is the result of a single vector of variation, which could be technical, but is in any case unrelated to the experimental design. To investigate this, we attempt to model this vector of variation using Surrogate Variable Analysis ([SVA](https://www.bioconductor.org/packages/release/bioc/html/sva.html) - see the [exact implementation here](misc.R)), and to visualize the reported genes in the corrected data:
 
 
 ```r
@@ -149,13 +139,13 @@ sehm(se, genes, do.scale=T, assayName="corrected", anno_columns=c("ELS","FST","G
 
 As we can see, removing technical variability abolishes the effects for the male-female stress difference seen in the single replicate comparisons.
 
-Together, this re-analysis indicates that the reported sex-specific transcriptional responses to stress were wrong. 
+Together, this re-analysis indicates that the reported sex-specific transcriptional responses to stress are not supported by the data.
 
 <br/><br/>
 
 ## Assessment of the reported genotype-dependent sex differences from Gray et al. 2018
 
-A complete assessment of the findings of Gray et al. 2018 is unfortunately not possible since the repository [GSE100579](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE100579) is missing crucial samples for the chronic stress model for the BDNF Val66Met genotype and only includes samples of acute stress.
+A complete assessment of the findings of Gray et al. 2018 is unfortunately not possible since the repository [GSE100579](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE100579) is missing critical samples for the chronic stress model for the BDNF Val66Met genotype and only includes samples of acute stress.
 
 However, the authors claim that many genes are differentially regulated between WildType and BDNF Val66Met animals at baseline, a regulation which is dependent on sex. While no complete list of genes has been included in the publication, a subset can be found in the publication's [Table 1](https://www.nature.com/articles/mp2016219/tables/1).
 
@@ -185,9 +175,9 @@ sehm(se, genes, do.scale=T, assayName="logcpm", anno_columns=c("FST","Genotype",
 
 ![](figures/README-unnamed-chunk-8-1.png)<!-- -->
 
-We see a similar pattern as for the differences reported in Marrocco et al 2017: the baseline difference are not reproduce the other samples, where these genes instead show high intra-group variability.
+We see a similar pattern as for the differences reported in Marrocco et al 2017: the baseline difference cannot be reproduced in the additional samples, where these genes instead show high intra-group variability.
 
-Let's again try to eliminate technical variabilty and re-visualize the same genes
+As described above, we again eliminate technical variabilty and re-visualize the same genes:
 
 
 ```r
@@ -215,7 +205,7 @@ It becomes apparent that these genes were again the result of variation unrelate
 
 ## Assessment of Marrocco et al. 2019
 
-Here we re-analyse Marrocco et al. 2019 checking for early life stress (ELS) -dependent changes in the acute stress (AS) response. The results presented here are also largely reproduced using a [different quantification](salmonBased.Rmd) and a using [DESeq2 instead of edgeR](DESeq2.Rmd). Although DESeq2 produced more hits, all analyses had similar results, and the core message of the original publication, namely that ELS substantially impacts the transcriptional acute stress response, could not be reproduced with any method.
+Here we re-analyse Marrocco et al. 2019 checking for early life stress (ELS) -dependent changes in the acute stress (AS) response. The results presented here are also largely reproduced using a [different quantification](salmonBased.Rmd) and using [DESeq2 instead of edgeR](DESeq2.Rmd). Although DESeq2 produced more hits, all analyses had similar results, and the core message of the original publication, namely that ELS substantially impacts the transcriptional acute stress response, could not be reproduced with either method.
 
 ### Visualization of genes reported in the publication 
 
@@ -226,7 +216,7 @@ se <- se[order(rownames(se)),]
 se <- subset(se,select  = se$Set == "GSE131972")
 ```
 
-In their publications the authors unfortunately do not upload a list with differentially expressed genes. However, in their discussion they mention a number of genes that they claim are differentially expressed between ELS and non-ELS mice after acute stress. We look at the expression of these genes across the very samples used in their study. They claim that selected genes are only induced in non-ELS mice following FST:
+In their publications the authors unfortunately do not upload a list with differentially expressed genes. However, in their discussion they mention a number of genes that they thought to be differentially expressed between ELS and non-ELS mice after acute stress. We look at the expression of these genes across the very samples used in their study. They claim that selected genes are only induced in non-ELS mice following FST:
 
 
 ```r
@@ -236,9 +226,9 @@ sehm(se, c("Grin1","Grin2a","Gabbr2","Gabra1"), do.scale=T, assayName="logcpm",
 
 ![](figures/README-unnamed-chunk-11-1.png)<!-- -->
 
-In light of the very large intra-group variability of these genes, their any claim on their non-ELS-dependent activation is dubious.
+In light of the very large intra-group variability of these genes, it appears unlikely that these genes are indeed only induced in non-ELS treated mice.
 
-Further, they claim that a restricted set of genes selectively induced by FST in ELS mice but not non-ELS mice.
+Further, they claim that a restricted set of genes is selectively induced by FST in ELS mice but not non-ELS mice.
 
 
 ```r
@@ -247,7 +237,7 @@ sehm(se, c("Per1", "Npy", "Nfkbia", "Penk","Dusp1", "Cst3", "Trib1", "Htra1", "S
 
 ![](figures/README-unnamed-chunk-12-1.png)<!-- -->
 
-Once more, this claim does not look very robust: while these genes might be increased in expression in ELS mice upon stress, the variability across samples of the same group prevents use from making clear claims, and especially to claim that these genes are not activated in the non-ELS group, where one of the two samples does appear to show an activation. More refined analysis will be necessary to establish the significance of these patterns (see below).
+While these genes might be increased in expression in ELS mice upon stress, the variability across samples of the same group prevents strong claims. In particular, the claim that these genes are not activated in the non-ELS group appears questionable, as one of the two non-ELS samples shows an activation of these genes. More refined analysis (see below), as well as a larger sample size, would be needed to address this question with confidence.
 
 Finally, the authors claim that there are a number of genes that appear to be induced by AS in both ELS and non ELS mice, including the following:
 
@@ -257,12 +247,11 @@ sehm(se, c("Egr1", "Egr2", "Egr4", "Arc","Fos", "Fosb"), do.scale=T, assayName="
 
 ![](figures/README-unnamed-chunk-13-1.png)<!-- -->
 
-For these genes, instead, we concur with the authors that these well-known genes appear to show a consistent activation.
-
+For these well-known genes, indeed, all samples show a consistent increase in response to AS.
 
 ### Interaction analysis
 
-To establish whether ELS does impact the transcriptional response to acute stress, it is insufficient to simply analyse the two response separately, as the authors did, and simply substract the sets of significant genes. Instead, we need to rely on linear regression using an interaction term, which is fortunately possible using edgeR's generalized linear models. Here we use the standard glm which is less stringent and more susceptible to type 1 errors, but has a better sensitivity in low replicate experiments. An analysis with a glmQL model did not yield any significant results.
+To establish whether ELS does impact the translational response to acute stress, the authors analyzed the two response separately and substracted the sets of significant genes. While this practice is widespread, the appropriate analysis is a linear regression using an interaction term, which is fortunately possible using edgeR's generalized linear models. Here we use the standard `glmLRT` which is less stringent and more susceptible to type 1 errors, but has a better sensitivity in low replicate experiments (an analysis with a glmQL model did not yield any significant results).
 
 
 
@@ -351,7 +340,7 @@ topTags(Results$`se$FSTFST:se$ELSELS`)
 ## Rpl9-ps6     -12.073767 -2.0080711 11.01066 9.058948e-04 0.99984358
 ```
 
-No genes have a altered acute stress response in ELS vs normal animals. This is stark contrast with the authors' own conclusions, as the original study reported hundereds of genes being as being altered in their FST response following ELS.
+No genes have a altered acute stress response in ELS vs normal animals. This is stark contrast with the authors' conclusions, reporting that hundereds of genes show altered expression in response to FST in ELS vs non-ELS groups.
 
 A similar analysis using [DESeq2 instead of edgeR](DESeq2.Rmd) reaches similar conclusions.
 
@@ -361,7 +350,7 @@ A similar analysis using [DESeq2 instead of edgeR](DESeq2.Rmd) reaches similar c
 
 # Meta-Analysis of all data
 
-Given that the original studies were too underpowered to support their claims and used inappropriate methods to compare  transcriptional responses, we wought to combine the data from both accessions to try to give more robust answers to the questions raised by the authors, in particular:
+Given that the original studies were underpowere, we combined the data from both accessions to try to give more robust answers to the questions raised by the authors, in particular:
 
 1. are genes differentially translated following forces swim stress?
 2. are genes differentially translated following males and females?
@@ -375,7 +364,7 @@ Given that the original studies were too underpowered to support their claims an
 
 ## Additive model
 
-Let's run an overarching analysis over all data to determine if there are any significant effects for forces swim stress (=FST), Sex, Genotype or early life stress (=ELS). In the process we also remove technical variabilty to increase the chance of successfully find candidate genes. Here, we use a glmQL model in order to better correct for type I errors.
+We first ran an analysis over all data to determine if there are any significant effects for forces swim stress (=FST), Sex, Genotype or early life stress (=ELS). In the process we also remove technical variabilty to increase the chance of successfully finding candidate genes. Here, we use a glmQL model in order to better correct for type I errors.
 
 
 ```r
@@ -409,7 +398,7 @@ for(i in colnames(design)[-1]){
 }
 ```
 
-### Are genes differentially translated following forces swim stress?
+### Are genes differentially translated following forced swim stress?
 
 ```r
 se <- se[,order(se$FST)]
@@ -463,7 +452,7 @@ topTags(Results$`se$FSTFST`, p.value = 0.05, n = 30)
 ## Trib1       0.6941620  3.45398865  31.57881 4.152221e-05 1.973784e-02
 ```
 
-There are multiple candidate genes that are significantly altered by acute stress across.
+There are multiple candidate genes that are significantly altered by acute stress. Reassuringly, these genes contain many of the well-characterized immediate early genes known to be reliably induced by acute stress challenges (e.g. Egr4, Fos, Dusp1, JunB, Per1, Npas4 etc.).
 
 ### Are genes differentially translated between males and females?
 
@@ -776,12 +765,6 @@ topTags(Results$`se$FSTFST:se$ELSELS`)
 ```
 
 No genes pass multiple testing correction.
-
-<br/><br/>
-
-***
-
-# Conclusion
 
 <br/><br/>
 
