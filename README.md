@@ -20,7 +20,7 @@ We show that a number of the analyses and claims made in these publications are 
 
 # Methods
 
-We acquired the deposited raw sequencing fastq files from the online repositories GSE100579 (10 sequencing runs for (Marrocco et al. 2017, Gray et al. 2018) and GSE131972 (sequencing 10 runs for (Marrocco et al. 2019)) and used kallisto (DOI:10.1038/nbt.3519, version 0.44.0) for the pseudoalignment of reads on the GENCODE M17 transcriptome, with an estimated fragment length of 200 ±20. GENsOME ALIGNMENT SPECIFICS
+We acquired the deposited raw sequencing fastq files from the online repositories GSE100579 (10 sequencing runs for (Marrocco et al. 2017, Gray et al. 2018) and GSE131972 (sequencing 10 runs for (Marrocco et al. 2019)) and used kallisto (DOI:10.1038/nbt.3519, version 0.44.0) for the pseudoalignment of reads on the GENCODE M17 transcriptome, with an estimated fragment length of 200 ±20. However, we also reproduced the analysis using a [different quantification](salmonBased.Rmd).
 
 # Re-analysis of published results
 
@@ -753,6 +753,13 @@ topTags(Results$`se$FSTFST:se$ELSELS`)
 ```
 
 No genes pass multiple testing correction.
+
+<br/><br/>
+
+## Staged FDR calculation
+
+Testing for interactions requires more power than simpler comparisons, and when the data does not afford sufficient power, it is preferable not to test all hypotheses, or not to give them equal weight. We therefore also tried a [staged FDR calculation](stageR.md), which however yielded similar results.
+
 
 <br/><br/>
 
