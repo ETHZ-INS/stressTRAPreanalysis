@@ -20,7 +20,7 @@ We show that a number of the analyses and claims made in these publications are 
 
 # Methods
 
-We acquired the deposited raw sequencing fastq files from the online repositories GSE100579 (10 sequencing runs for (Marrocco et al. 2017, Gray et al. 2018) and GSE131972 (sequencing 10 runs for (Marrocco et al. 2019)) and used kallisto (DOI:10.1038/nbt.3519, version 0.44.0) for the pseudoalignment of reads on the GENCODE M17 transcriptome, with an estimated fragment length of 200 ±20. However, we also reproduced the analysis using a [different quantification](salmonBased.Rmd).
+We acquired the deposited raw sequencing fastq files from the online repositories GSE100579 (10 sequencing runs for (Marrocco et al. 2017, Gray et al. 2018) and GSE131972 (sequencing 10 runs for (Marrocco et al. 2019)) and used kallisto (DOI:10.1038/nbt.3519, version 0.44.0) for the pseudoalignment of reads on the GENCODE M17 transcriptome, with an estimated fragment length of 200 ±20. However, we also reproduced the full analysis using a [transcriptome-based analysis](codingTranscriptome.md) as the authors did in some of the publications.
 
 # Re-analysis of published results
 
@@ -39,7 +39,7 @@ set.seed(12345)
 ```
 
 Because we later provide a meta-analysis of the datasets, we will work on a uniform, [kallisto](https://pachterlab.github.io/kallisto/about)-based quantification.
-However, the re-assessment of the authors' original claims were also reproduced using an alternative quantification method (see [salmonBased.md](salmonBased.md)).
+However, the re-assessment of the authors' original claims were also reproduced using an alternative quantification method (see [codingTranscriptome.md](codingTranscriptome.md)).
 
 ## Assessment of the reported sex-specific responses from Marrocco et al. 2017
 
@@ -193,7 +193,7 @@ It becomes apparent that these genes were again the result of variation unrelate
 
 ## Assessment of Marrocco et al. 2019
 
-Here we re-analyse Marrocco et al. 2019 checking for early life stress (ELS) -dependent changes in the acute stress (AS) response. The results presented here are also largely reproduced using a [different quantification](salmonBased.Rmd) and using [DESeq2 instead of edgeR](DESeq2.Rmd). Although DESeq2 produced more hits, all analyses had similar results, and the core message of the original publication, namely that ELS substantially impacts the transcriptional acute stress response, could not be reproduced with either method.
+Here we re-analyse Marrocco et al. 2019 checking for early life stress (ELS) -dependent changes in the acute stress (AS) response. The results presented here are also largely reproduced using a [different quantification](codingTranscriptome.md) and using [DESeq2 instead of edgeR](DESeq2.md). Although DESeq2 produced a few more hits, all analyses had similar results, and the core message of the original publication, namely that ELS substantially impacts the transcriptional acute stress response, could not be reproduced with either method.
 
 ### Visualization of genes reported in the publication 
 
@@ -328,9 +328,9 @@ topTags(Results$`se$FSTFST:se$ELSELS`)
 ## Rpl9-ps6     -12.073767 -2.0080711 11.01066 9.058948e-04 0.99984358
 ```
 
-No genes have a altered acute stress response in ELS vs normal animals. This is stark contrast with the authors' conclusions, reporting that hundereds of genes show altered expression in response to FST in ELS vs non-ELS groups.
+No genes have a altered acute stress response in ELS vs normal animals. This is stark contrast with the authors' conclusions, reporting that hundreds of genes show altered expression in response to FST in ELS vs non-ELS groups.
 
-A similar analysis using [DESeq2 instead of edgeR](DESeq2.Rmd) reaches similar conclusions.
+A similar analysis using [DESeq2 instead of edgeR](DESeq2.md) reaches similar conclusions.
 
 <br/><br/>
 
@@ -338,7 +338,7 @@ A similar analysis using [DESeq2 instead of edgeR](DESeq2.Rmd) reaches similar c
 
 # Meta-Analysis of all data
 
-Given that the original studies were underpowere, we combined the data from both accessions to try to give more robust answers to the questions raised by the authors, in particular:
+Given that the original studies were underpowered, we combined the data from both accessions to try to give more robust answers to the questions raised by the authors, in particular:
 
 1. are genes differentially translated following forces swim stress?
 2. are genes differentially translated following males and females?
