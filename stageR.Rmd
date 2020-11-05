@@ -59,8 +59,9 @@ d1 <- data.frame(feature=degs, q=paste0("q~",format(res[degs,2], digits=2)))
 Two genes pass FDR:
 
 ```{r, fig.width=5, fig.height=3.5}
-ggplot(meltSE(se, d1$feature), aes(Sex, corrected)) + geom_boxplot(aes(fill=FST)) + 
+ggplot(meltSE(se, d1$feature), aes(Sex, corrected)) + geom_boxplot(aes(fill=FST), outlier.shape=NA) + 
   ylab("Corrected logCPM") + facet_wrap(~feature, scale="free_y") + 
+  geom_point(position=position_dodge(width=0.75), aes(group=FST), alpha=0.6) +
   geom_text(data=d1, aes(x=Inf, y=Inf, label=q), hjust=1.1, vjust=1.2)
 ```
 
@@ -96,8 +97,9 @@ d2 <- data.frame(feature=degs, q=paste0("q~",format(res[degs,2], digits=2)))
 A single gene passes FDR:
 
 ```{r, fig.width=7, fig.height=3.5}
-ggplot(meltSE(se, d2$feature), aes(Genotype, corrected)) + geom_boxplot(aes(fill=FST)) + 
+ggplot(meltSE(se, d2$feature), aes(Genotype, corrected)) + geom_boxplot(aes(fill=FST), outlier.shape=NA) + 
   ylab("Corrected logCPM") + facet_wrap(~feature, scale="free_y") + 
+  geom_point(position=position_dodge(width=0.75), aes(group=FST), alpha=0.6) +
   geom_text(data=d2, aes(x=Inf, y=Inf, label=q), hjust=1.1, vjust=1.2)
 ```
 

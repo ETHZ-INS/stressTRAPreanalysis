@@ -1,6 +1,6 @@
 # TRAP meta-analysis using staged FDR
 
-Here we combine the data from both accessions and test for interactions, using the more lenient staged false-discovery rate approach developed by <a href="https://doi.org/10.1186/s13059-017-1277-0">Van den Berge et al. (2017)</a>.
+Here we combine the data from both accessions and test for interactions, using the more lenient staged false-discovery rate approach  developed by <a href="https://doi.org/10.1186/s13059-017-1277-0">Van den Berge et al. (2017)</a>.
 
 
 ```r
@@ -66,8 +66,9 @@ Two genes pass FDR:
 
 
 ```r
-ggplot(meltSE(se, d1$feature), aes(Sex, corrected)) + geom_boxplot(aes(fill=FST)) + 
+ggplot(meltSE(se, d1$feature), aes(Sex, corrected)) + geom_boxplot(aes(fill=FST), outlier.shape=NA) + 
   ylab("Corrected logCPM") + facet_wrap(~feature, scale="free_y") + 
+  geom_point(position=position_dodge(width=0.75), aes(group=FST), alpha=0.6) +
   geom_text(data=d1, aes(x=Inf, y=Inf, label=q), hjust=1.1, vjust=1.2)
 ```
 
@@ -127,8 +128,9 @@ A single gene passes FDR:
 
 
 ```r
-ggplot(meltSE(se, d2$feature), aes(Genotype, corrected)) + geom_boxplot(aes(fill=FST)) + 
+ggplot(meltSE(se, d2$feature), aes(Genotype, corrected)) + geom_boxplot(aes(fill=FST), outlier.shape=NA) + 
   ylab("Corrected logCPM") + facet_wrap(~feature, scale="free_y") + 
+  geom_point(position=position_dodge(width=0.75), aes(group=FST), alpha=0.6) +
   geom_text(data=d2, aes(x=Inf, y=Inf, label=q), hjust=1.1, vjust=1.2)
 ```
 
