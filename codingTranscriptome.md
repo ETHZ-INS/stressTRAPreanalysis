@@ -277,7 +277,7 @@ topTags(Results$`se$ELSELS`)
 ## Pm20d2    -1.4462354  0.6842647  5.651260 1.744284e-02 0.9999852
 ```
 
-This time no gene even close to passing multiple testing correction.
+This time no gene is even close to passing multiple testing correction.
 
 We finally investigate whether there are genes with a significant interaction:
 
