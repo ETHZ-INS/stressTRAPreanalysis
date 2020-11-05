@@ -1,19 +1,6 @@
----
-title: "Trap Reanalysis - salmon-based analysis on coding transcriptome"
-output:
-  html_document:
-    keep_md: yes
-    theme: united
-    toc: yes
-  pdf_document:
-    toc: yes
----
-
-
+# Reanalysis using salmon-based quantification on the coding transcriptome"
 
 Here we reproduce the re-analysis shown in the [readme](README.md), but using a Rsubreads 2.0.1 alignment to the Ensembl 99 protein-coding transcriptome followed by a salmon 1.3.0 quantification. This further shows that the results are robust to changes in the quantification used.
-
-# Re-analysis of published results
 
 We first load the necessary packages and the data:
 
