@@ -1,0 +1,129 @@
+---
+title: "Trap Reanalysis - main figure"
+output:
+  html_document:
+    keep_md: yes
+    theme: united
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+  fig.path = "figures/main-"
+)
+```
+
+
+```{r results='hide', message=FALSE, warning=FALSE}
+library(edgeR)
+library(SEtools)
+library(SummarizedExperiment)
+library(sva)
+library(DESeq2)
+library(ComplexHeatmap)
+library(grid)
+library(cowplot)
+source("misc.R")
+kallistodata <- readRDS("data/AllData.kallisto.SE.rds")
+set.seed(12345)
+ancols <- list("FST"=c(None="lightgrey", FST="darkred"),
+               "Sex"=c(male="#332288", female="#DDCC77"),
+               "ELS"=c(None="lightgrey", ELS="#CC6677"),
+               "Genotype"=c(WildType="lightgrey", BDNFMET="#B395D7"),
+               Set=c(GSE100579="#4477AA", GSE131972="#CC6677" )
+          )
+options("SEtools_def_anno_colors"=ancols)
+```
+
+```{r}
+se <- kallistodata
+se <- subset(se,select  = se$Set == "GSE100579" & se$Genotype == "WildType")
+genes <- read.table("metadata/Marrocco2017GenderStressGenes.csv", sep = ";", header = T)
+genes <- intersect(genes$genes, row.names(se))
+se <- se[,order(se$Sex,se$FST)]
+pa <- grid.grabExpr(draw(sechm(se, genes, do.scale=T, assayName="logcpm", anno_columns=c("FST"), gaps_at="Sex"), merge_legend=TRUE))
+
+se <- kallistodata
+se <- subset(se,select  = se$Set == "GSE100579")
+se <- se[,order(se$Genotype,se$Sex,se$FST)]
+pb <- grid.grabExpr(draw(sechm(se, genes, do.scale=T, assayName="logcpm", anno_columns=c("Sex","FST"), gaps_at="Genotype"), merge_legend=TRUE))
+
+se <- kallistodata
+se <- se[,order(se$Set, se$Sex,se$FST)]
+se <- dosvacor(se, form = ~ Set + Sex * FST, form0 = ~Set)
+
+tmp <- mergeSEs(list(logcpm=se[genes,], corrected=se[genes,]))
+assays(tmp)$expression <- cbind(assays(tmp)$logcpm[,seq_len(ncol(se))], assays(tmp)$corrected[,ncol(se)+seq_len(ncol(se))])
+tmp$type <- factor(rep(c("uncorrected\nlogcpm", "corrected"), each=ncol(se)), levels=c("uncorrected\nlogcpm", "corrected"))
+tmp <- tmp[,order(tmp$type, tmp$Sex, tmp$FST, tmp$Genotype)]
+
+pc <- grid.grabExpr(draw(sechm(tmp, genes, do.scale=T, assayName="expression", anno_columns=c("Sex","Genotype","FST"), gaps_at="type"), merge_legend=TRUE))
+```
+
+```{r}
+se <- subset(se,select  = se$Set == "GSE131972")
+
+g2 <- list(c("Per1", "Npy", "Nfkbia", "Penk","Dusp1", "Cst3", "Trib1", "Htra1", "Sdc4", "Plekhf1"),
+           c("Grin1","Grin2a","Gabbr2","Gabra1"))
+rowData(se)$geneset <- ""
+rowData(se)[g2[[1]], "geneset"] <- "reported\nELS only"
+rowData(se)[g2[[2]], "geneset"] <- "reported\nnon-ELS only"
+rowData(se)$geneset <- factor(rowData(se)$geneset, c("", "reported\nnon-ELS only", "reported\nELS only"))
+
+pd <- grid.grabExpr(draw(sechm(se, unlist(g2), do.scale=T, assayName="logcpm", anno_columns=c("ELS","FST"), toporder="geneset", gaps_row="geneset", column_title="Genes from\nMorrocco et al. 2019"), merge_legends=TRUE))
+```
+
+
+```{r}
+se <- kallistodata
+se <- dosvacor(se, form = ~FST + Sex + Genotype + Set + ELS, form0 = ~Set)
+
+#experimental design, full additive model
+design <- model.matrix(~ se$SV1 + se$SV2 + se$SV3 + se$FST + se$Sex + 
+                         se$Genotype + se$Set + se$ELS )
+
+y <- DGEList(counts=assays(se)$counts)
+y <- calcNormFactors(y)
+y <- estimateDisp(y,design)
+y <- y[filterByExpr(y, design),]
+
+Results <- list()
+fit <- glmQLFit(y,design)
+for(i in colnames(design)[-1]){
+  Results[[i]] <- glmQLFTest(fit, i)
+}
+```
+
+```{r}
+se <- se[,order(se$FST, se$Sex)]
+pe <- grid.grabExpr(draw( sechm(se, rownames(topTags(Results$`se$FSTFST`,p.value = 0.05, n = 1000)), 
+                                do.scale=T, assayName="corrected", anno_columns=c("Sex","ELS","FST"), 
+                                column_title="   Significant FST genes", row_names_gp=gpar(fontsize = 12)), #merge_legends=TRUE))
+                                show_heatmap_legend=FALSE, show_annotation_legend=FALSE))
+pf <- grid.grabExpr(draw(sechm(se[,order(se$Sex)], rownames(topTags(Results$`se$Sexfemale`,p.value = 0.05, n = 1000)), do.scale=T, assayName="corrected", anno_columns=c("Sex","ELS","FST"), column_title=" Significant sex genes"), merge_legends=TRUE))
+```
+
+```{r, fig.width=11.5, fig.height=10.5}
+p <- plot_grid( plot_grid(pa, pb, pc, labels=c("A","B","C"), nrow=3, rel_heights = c(6,8,11)),
+                plot_grid(pd, pf, labels=c("D","E"), nrow=2, rel_heights = c(3,5)),
+                plot_grid(pe, labels=c("F")),
+                nrow=1, rel_widths=c(5,5,4), scale = 0.95)
+p
+pdf("figure2.pdf", width=11.5, height=10.5)
+p
+dev.off()
+```
+
+```{r, fig.width=11.5, fig.height=11.5}
+p <- plot_grid( plot_grid(pa, pb, pd, labels=c("A","B","D"), nrow=1),
+           plot_grid(pc, pe, pf, labels=c("C","E","F"), nrow=1),
+           nrow=2, rel_heights = c(3,6)
+         )
+pdf("figure.pdf", width=11.5, height=11.5)
+p
+dev.off()
+p
+```
+
