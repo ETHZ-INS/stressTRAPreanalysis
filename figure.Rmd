@@ -46,9 +46,10 @@ se <- se[,order(se$Sex,se$FST)]
 pa <- grid.grabExpr(draw(sechm(se, genes, do.scale=T, assayName="logcpm", anno_columns=c("FST"), gaps_at="Sex"), merge_legend=TRUE))
 
 se <- kallistodata
-se <- subset(se,select  = se$Set == "GSE100579")
-se <- se[,order(se$Genotype,se$Sex,se$FST)]
-pb <- grid.grabExpr(draw(sechm(se, genes, do.scale=T, assayName="logcpm", anno_columns=c("Sex","FST"), gaps_at="Genotype"), merge_legend=TRUE))
+se <- se[, (se$Set == "GSE100579" & se$Genotype == "WildType") |
+           (se$Set == "GSE131972" & se$ELS == "None" )]
+se <- se[,order(se$Set,se$Sex,se$FST)]
+pb <- grid.grabExpr(draw(sechm(se, genes, do.scale=T, assayName="logcpm", anno_columns=c("Sex","FST"), gaps_at="Set"), merge_legend=TRUE))
 
 se <- kallistodata
 se <- se[,order(se$Set, se$Sex,se$FST)]
@@ -56,10 +57,10 @@ se <- dosvacor(se, form = ~ Set + Sex * FST, form0 = ~Set)
 
 tmp <- mergeSEs(list(logcpm=se[genes,], corrected=se[genes,]))
 assays(tmp)$expression <- cbind(assays(tmp)$logcpm[,seq_len(ncol(se))], assays(tmp)$corrected[,ncol(se)+seq_len(ncol(se))])
-tmp$type <- factor(rep(c("uncorrected\nlogcpm", "corrected"), each=ncol(se)), levels=c("uncorrected\nlogcpm", "corrected"))
-tmp <- tmp[,order(tmp$type, tmp$Sex, tmp$FST, tmp$Genotype)]
+tmp$type <- factor(rep(c("Uncorrected\nlogcpm", "Corrected"), each=ncol(se)), levels=c("Uncorrected\nlogcpm", "Corrected"))
+tmp <- tmp[,order(tmp$type, tmp$Sex, tmp$FST, tmp$ELS, tmp$Genotype)]
 
-pc <- grid.grabExpr(draw(sechm(tmp, genes, do.scale=T, assayName="expression", anno_columns=c("Sex","Genotype","FST"), gaps_at="type"), merge_legend=TRUE))
+pc <- grid.grabExpr(draw(sechm(tmp, genes, do.scale=T, assayName="expression", anno_columns=c("Sex","Genotype","FST","ELS"), gaps_at="type"), merge_legend=TRUE))
 ```
 
 ```{r}
@@ -68,11 +69,11 @@ se <- subset(se,select  = se$Set == "GSE131972")
 g2 <- list(c("Per1", "Npy", "Nfkbia", "Penk","Dusp1", "Cst3", "Trib1", "Htra1", "Sdc4", "Plekhf1"),
            c("Grin1","Grin2a","Gabbr2","Gabra1"))
 rowData(se)$geneset <- ""
-rowData(se)[g2[[1]], "geneset"] <- "reported\nELS only"
-rowData(se)[g2[[2]], "geneset"] <- "reported\nnon-ELS only"
-rowData(se)$geneset <- factor(rowData(se)$geneset, c("", "reported\nnon-ELS only", "reported\nELS only"))
+rowData(se)[g2[[1]], "geneset"] <- "Reported\nELS only"
+rowData(se)[g2[[2]], "geneset"] <- "Reported\nnon-ELS only"
+rowData(se)$geneset <- factor(rowData(se)$geneset, c("", "Reported\nnon-ELS only", "Reported\nELS only"))
 
-pd <- grid.grabExpr(draw(sechm(se, unlist(g2), do.scale=T, assayName="logcpm", anno_columns=c("ELS","FST"), toporder="geneset", gaps_row="geneset", column_title="Genes from\nMorrocco et al. 2019"), merge_legends=TRUE))
+pd <- grid.grabExpr(draw(sechm(se, unlist(g2), do.scale=T, assayName="logcpm", anno_columns=c("ELS","FST"), toporder="geneset", gaps_row="geneset", column_title="Genes from\nMarrocco et al. 2019", row_names_gp=gpar(fontsize = 11)), merge_legends=TRUE))
 ```
 
 
@@ -100,16 +101,18 @@ for(i in colnames(design)[-1]){
 se <- se[,order(se$FST, se$Sex)]
 pe <- grid.grabExpr(draw( sechm(se, rownames(topTags(Results$`se$FSTFST`,p.value = 0.05, n = 1000)), 
                                 do.scale=T, assayName="corrected", anno_columns=c("Sex","ELS","FST"), 
-                                column_title="   Significant FST genes", row_names_gp=gpar(fontsize = 12)), #merge_legends=TRUE))
+                                column_title="   Significant FST genes", row_names_gp=gpar(fontsize = 11)), #merge_legends=TRUE))
                                 show_heatmap_legend=FALSE, show_annotation_legend=FALSE))
-pf <- grid.grabExpr(draw(sechm(se[,order(se$Sex)], rownames(topTags(Results$`se$Sexfemale`,p.value = 0.05, n = 1000)), do.scale=T, assayName="corrected", anno_columns=c("Sex","ELS","FST"), column_title=" Significant sex genes"), merge_legends=TRUE))
+pf <- grid.grabExpr(draw(sechm(se[,order(se$Sex)], rownames(topTags(Results$`se$Sexfemale`,p.value = 0.05, n = 1000)), do.scale=T, assayName="corrected", anno_columns=c("Sex","ELS","FST"), column_title=" Significant sex genes", row_names_gp=gpar(fontsize = 11)), merge_legends=TRUE))
 ```
 
-```{r, fig.width=11.5, fig.height=10.5}
-p <- plot_grid( plot_grid(pa, pb, pc, labels=c("A","B","C"), nrow=3, rel_heights = c(6,8,11)),
-                plot_grid(pd, pf, labels=c("D","E"), nrow=2, rel_heights = c(3,5)),
+```{r, fig.width=11.5, fig.height=9}
+p <- plot_grid( plot_grid(pa, pb, pc, labels=c("A","B","C"), nrow=3, rel_heights = c(6,8,10)),
+                NULL,
+                plot_grid(pd, NULL, pf, labels=c("D",NA,"E"), nrow=3, rel_heights = c(5,0.3,8)),
+                NULL,
                 plot_grid(pe, labels=c("F")),
-                nrow=1, rel_widths=c(5,5,4), scale = 0.95)
+                nrow=1, rel_widths=c(5,0.5,5,0.5,4))
 p
 pdf("figure2.pdf", width=11.5, height=10.5)
 p
