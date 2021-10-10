@@ -284,7 +284,7 @@ se <- se[,order(se$FST)]
 sehm(se, rownames(topTags(Results$`se$FSTFST`,p.value = 0.05, n = 1000)), assayName = "corrected", do.scale = TRUE, anno_columns=c("ELS","FST","Genotype","Sex","Set"), main="Significant FST genes with corrected data")
 sehm(se, rownames(topTags(Results$`se$FSTFST`,p.value = 0.05, n = 1000)), assayName = "logcpm", do.scale = TRUE, anno_columns=c("ELS","FST","Genotype","Sex","Set"), main="Significant FST genes with uncorrected data")
 topTags(Results$`se$FSTFST`, p.value = 0.05, n = 30)
-dea <- as.data.frame(topTags(Results$`se$FSTFST`))
+dea <- as.data.frame(topTags(Results$`se$FSTFST`, Inf))
 write.table(dea, "meta_FST_dea.tab", row.names = TRUE, col.names = TRUE, sep = "\t")
 ```
 
